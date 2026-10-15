@@ -51,7 +51,7 @@ export const tools: OpenAI.ChatCompletionTool[] = [
 ];
 
 // 2. Tool Implementations (Asli code jo execute hoga)
-export async function executeTool(name: string, args: Record<string, any>): Promise<any> {
+export async function executeTool(name: string, args: Record<string, unknown>): Promise<unknown> {
   console.log(`🔧 Executing Tool: [${name}] with args:`, args);
 
   switch (name) {
@@ -66,8 +66,8 @@ export async function executeTool(name: string, args: Record<string, any>): Prom
     case "calculator": {
       try {
         // Safe math evaluation
-        const sanitized = args.expression.replace(/[^0-9+\-*/().%^e ]/g, "");
-        // eslint-disable-next-line no-new-func
+        const expr = typeof args.expression === "string" ? args.expression : String(args.expression || "");
+        const sanitized = expr.replace(/[^0-9+\-*/().%^e ]/g, "");
         const result = Function(`"use strict"; return (${sanitized})`)();
         return { result: String(result) };
       } catch (err: unknown) {
@@ -76,10 +76,11 @@ export async function executeTool(name: string, args: Record<string, any>): Prom
     }
 
     case "web_search": {
+      const query = typeof args.query === "string" ? args.query : String(args.query || "");
       const apiKey = process.env.TAVILY_API_KEY;
       if (!apiKey) {
         return {
-          results: `Tavily API key is not set yet. Mock result: '${args.query}' is trending!`,
+          results: `Tavily API key is not set yet. Mock result: '${query}' is trending!`,
         };
       }
 
