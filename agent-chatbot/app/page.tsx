@@ -235,53 +235,67 @@ export default function Home() {
 
   const isDark = theme === "dark";
 
-  // Gradient tokens matching user's purple.css: linear-gradient(315deg, #9f4ac9 0%, #7e4cc9 100%)
+  // Gradient tokens: Keep dark mode (#0b0714) 100% untouched; light mode uses gradient.css: linear-gradient(315deg, #845fe2 0%, #dec9ff 100%)
   const pageBg = isDark
     ? "bg-[#0b0714] text-[#ede8f5]"
-    : "bg-[#fbf9ff] text-[#1c1527]";
+    : "text-[#180f2d]";
 
-  const headerBorder = isDark ? "border-purple-900/30 bg-[#0e0a18]/60" : "border-purple-200/50 bg-white/60";
+  const headerBorder = isDark ? "border-purple-900/30 bg-[#0e0a18]/60" : "border-white/30 bg-white/45 backdrop-blur-xl";
 
   // Sidebar: Distinct frosted glass panel with structured sections
   const sidebarGlass = isDark
     ? "bg-[#0f091c]/85 border-purple-500/15 text-[#e5dff0]"
-    : "bg-white/80 border-purple-200/60 text-[#251b36]";
+    : "bg-white/80 border-white/40 text-[#251b36] shadow-xl";
 
   // Search/Prompt bar: Elevated glowing glassmorphic card with BorderBeam
   const promptCardBg = isDark
     ? "bg-[#140e24]/90 text-[#f5efff]"
-    : "bg-white/95 text-[#1b1429]";
+    : "bg-white/95 text-[#180f2d]";
 
   // Static chips (decorative, no pointer click triggers)
   const chipGlass = isDark
     ? "bg-white/[0.06] border-white/10 text-[#d4cbde]"
-    : "bg-purple-950/[0.04] border-purple-900/10 text-[#4c3b63]";
+    : "bg-purple-900/[0.06] border-purple-900/15 text-[#3b2b52]";
 
   // 3 Feature Cards styling (purely informational showcase, no click trigger)
   const featureCardClass = `p-4 rounded-2xl border transition-all duration-300 text-left select-none cursor-default backdrop-blur-xl ${
     isDark
       ? "bg-[#130c22]/75 border-purple-500/15 shadow-lg shadow-purple-950/20"
-      : "bg-white/80 border-purple-200/70 shadow-md shadow-purple-900/5"
+      : "bg-white/85 border-white/60 shadow-lg shadow-purple-900/10 text-[#1f1530]"
   }`;
 
   return (
     <div
       suppressHydrationWarning
       className={`flex h-screen w-full overflow-hidden font-sans transition-colors duration-300 relative ${pageBg}`}
+      style={
+        !isDark
+          ? {
+              backgroundColor: "#845fe2",
+              backgroundImage: "linear-gradient(315deg, #845fe2 0%, #dec9ff 100%)",
+            }
+          : undefined
+      }
     >
       {/* 🔮 Ambient Purple Aura Background Layer (from purple.css) */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div
           className={`absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full blur-[140px] opacity-40 transition-all duration-700 ${
-            isDark ? "bg-[#9f4ac9]/30" : "bg-[#9f4ac9]/15"
+            isDark ? "bg-[#9f4ac9]/30" : "bg-white/20"
           }`}
         />
         <div
           className={`absolute -bottom-40 -left-40 w-[650px] h-[650px] rounded-full blur-[160px] opacity-35 transition-all duration-700 ${
-            isDark ? "bg-[#7e4cc9]/30" : "bg-[#7e4cc9]/15"
+            isDark ? "bg-[#7e4cc9]/30" : "bg-purple-300/25"
           }`}
         />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-gradient-to-r from-purple-600/10 via-fuchsia-600/10 to-indigo-600/10 rounded-full blur-[180px] opacity-30" />
+        <div
+          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full blur-[180px] ${
+            isDark
+              ? "bg-gradient-to-r from-purple-600/10 via-fuchsia-600/10 to-indigo-600/10 opacity-30"
+              : "bg-white/15 opacity-20"
+          }`}
+        />
       </div>
 
       {/* 1. Left Glassmorphic Sidebar */}
@@ -433,7 +447,7 @@ export default function Home() {
               className={`p-2 rounded-full border backdrop-blur-md transition ${
                 isDark
                   ? "border-purple-500/20 bg-white/5 hover:bg-white/10 text-amber-300"
-                  : "border-purple-200 bg-white/80 hover:bg-purple-50 text-purple-700"
+                  : "border-white/30 bg-white/80 hover:bg-white text-purple-700 shadow-sm"
               }`}
               title="Toggle theme"
             >
@@ -465,13 +479,13 @@ export default function Home() {
                     style={{
                       background: isDark
                         ? "radial-gradient(circle, #9f4ac9 0%, #7e4cc9 65%, transparent 100%)"
-                        : "radial-gradient(circle, #c084fc 0%, #a855f7 65%, transparent 100%)",
+                        : "radial-gradient(circle, #845fe2 0%, #dec9ff 65%, transparent 100%)",
                     }}
                   />
 
                   <FluidOrb
                     size={200}
-                    color={isDark ? "#9f4ac9" : "#8b5cf6"}
+                    color={isDark ? "#9f4ac9" : "#845fe2"}
                     className="shadow-2xl shadow-purple-950/30"
                   />
                 </div>
@@ -491,7 +505,7 @@ export default function Home() {
                   className={`w-full rounded-[24px] p-3.5 md:p-4 backdrop-blur-2xl border transition-all shadow-xl hover:shadow-2xl mb-4 ${promptCardBg} ${
                     isDark
                       ? "border-purple-500/20 shadow-purple-950/20"
-                      : "border-purple-200/80 shadow-purple-900/5 bg-white/95"
+                      : "border-white/70 shadow-purple-950/15"
                   }`}
                 >
                   {/* Top Action Row (Static visual badges, NO click triggers) */}
@@ -503,12 +517,16 @@ export default function Home() {
                       <span className="text-[11px]">Focus Agent</span>
                     </div>
 
-                    <span className="text-[11px] opacity-40 font-mono cursor-default">
+                    <span
+                      className={`text-[11px] font-mono cursor-default transition-colors ${
+                        isDark ? "text-purple-300/60" : "text-purple-950/70 font-medium"
+                      }`}
+                    >
                       Astra Multi-Agent Supervisor
                     </span>
                   </div>
 
-                  {/* Textarea (FUNCTIONAL: User types here) */}
+                  {/* Textarea (FUNCTIONAL: User types here - high contrast & immediately visible on theme switch) */}
                   <textarea
                     ref={textareaRef}
                     value={input}
@@ -516,7 +534,11 @@ export default function Home() {
                     onKeyDown={handleKeyDown}
                     rows={2}
                     placeholder="Message Astra AI or ask anything..."
-                    className="w-full bg-transparent resize-none outline-none text-sm md:text-base leading-relaxed py-1 px-1 placeholder:opacity-40"
+                    className={`w-full bg-transparent resize-none outline-none text-sm md:text-base leading-relaxed py-1 px-1 transition-colors duration-200 ${
+                      isDark
+                        ? "text-zinc-100 placeholder:text-zinc-400 placeholder:opacity-90"
+                        : "text-[#180f2d] placeholder:text-[#523d70] placeholder:opacity-90 font-medium"
+                    }`}
                   />
 
                   {/* Bottom Controls Row: Visual Chips & ONLY Send Arrow is Functional */}
@@ -677,7 +699,7 @@ export default function Home() {
             <div className="max-w-3xl mx-auto shadow-xl">
               <div
                 className={`w-full rounded-[22px] p-3 backdrop-blur-2xl border transition-all flex items-end gap-2 ${promptCardBg} ${
-                  isDark ? "border-purple-500/20 shadow-purple-950/20" : "border-purple-200/80 shadow-purple-900/5 bg-white/95"
+                  isDark ? "border-purple-500/20 shadow-purple-950/20" : "border-white/70 shadow-purple-950/10"
                 }`}
               >
                 {/* Decorative At icon (static) */}
@@ -687,7 +709,7 @@ export default function Home() {
                   <AtSignIcon />
                 </div>
 
-                {/* Textarea (FUNCTIONAL) */}
+                {/* Textarea (FUNCTIONAL - high contrast & immediately visible on theme switch) */}
                 <textarea
                   ref={textareaRef}
                   value={input}
@@ -696,7 +718,11 @@ export default function Home() {
                   rows={1}
                   placeholder="Ask Astra AI anything..."
                   disabled={isLoading}
-                  className="flex-1 bg-transparent resize-none outline-none text-sm leading-relaxed max-h-36 px-2 py-1 placeholder:opacity-40"
+                  className={`flex-1 bg-transparent resize-none outline-none text-sm leading-relaxed max-h-36 px-2 py-1 transition-colors duration-200 ${
+                    isDark
+                      ? "text-zinc-100 placeholder:text-zinc-400 placeholder:opacity-90"
+                      : "text-[#180f2d] placeholder:text-[#523d70] placeholder:opacity-90 font-medium"
+                  }`}
                 />
 
                 {/* Submit Button (FUNCTIONAL) */}

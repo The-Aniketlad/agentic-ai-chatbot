@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fbf9ff;
+  --background: #dec9ff;
   --foreground: #1c1527;
+  --light-gradient: linear-gradient(315deg, #845fe2 0%, #dec9ff 100%);
   --purple-gradient: linear-gradient(315deg, #9f4ac9 0%, #7e4cc9 100%);
 }
 
@@ -25,6 +26,11 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   overflow: hidden;
+}
+
+/* Ensure prompt textarea placeholders transition cleanly and stay crisp */
+textarea::placeholder {
+  transition: color 0.2s ease, opacity 0.2s ease;
 }
 
 /* Custom sleek scrollbar */
