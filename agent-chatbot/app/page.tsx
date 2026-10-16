@@ -278,7 +278,9 @@ export default function Home() {
       {/* 1. Left Glassmorphic Sidebar */}
       <aside
         className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col justify-between w-64 transition-all duration-300 ease-in-out z-20 ${sidebarGlass} ${
-          isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:-ml-64 shadow-none"
+          isSidebarOpen
+            ? "translate-x-0 shadow-2xl opacity-100 visible"
+            : "-translate-x-full md:-ml-64 shadow-none opacity-0 invisible pointer-events-none"
         }`}
       >
         <div className="flex flex-col p-3 space-y-3">
@@ -451,7 +453,7 @@ export default function Home() {
                       <span className="text-[11px]">Focus Agent</span>
                     </div>
 
-                    <span className="text-[11px] font-mono cursor-default transition-colors supervisor-text">
+                    <span className="text-xs font-medium cursor-default transition-colors supervisor-text">
                       Astra Multi-Agent Supervisor
                     </span>
                   </div>
