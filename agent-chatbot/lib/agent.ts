@@ -23,7 +23,7 @@ export async function runAgent(
   const MAX_STEPS = 5; // Safety limit: loop kabhi infinite na chale
 
   for (let step = 0; step < MAX_STEPS; step++) {
-    console.log(`🤖 Agent Loop: Step ${step + 1}/${MAX_STEPS}...`);
+    console.log(`✦ Agent Loop: Step ${step + 1}/${MAX_STEPS}...`);
 
     // 2. Call our multi-provider fallback engine with available tools
     const res = await chat(convo, { tools: agentTools.length > 0 ? agentTools : undefined });

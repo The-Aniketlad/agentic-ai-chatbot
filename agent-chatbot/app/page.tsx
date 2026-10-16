@@ -74,29 +74,25 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const isMountedRef = useRef(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [greeting, setGreeting] = useState("Good Evening");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [greeting, setGreeting] = useState("Good Afternoon");
   const [searchFilter, setSearchFilter] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // 1. Mount: Hydrate client preferences seamlessly without SSR mismatch
+  // 1. Mount: Hydrate client preferences cleanly without hydration mismatch
   useEffect(() => {
     isMountedRef.current = true;
 
+    // Calculate client local greeting safely inside useEffect (satisfies Next.js 16 prerender rule)
+    const hour = new Date().getHours();
+    setGreeting(hour < 12 ? "Good Morning" : hour < 18 ? "Good Afternoon" : "Good Evening");
+
     // Restore saved theme
     const savedTheme = localStorage.getItem("astra_theme") as "dark" | "light" | null;
-    const initialTheme = savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-    if (initialTheme !== "dark") {
-      requestAnimationFrame(() => setTheme(initialTheme));
-    }
-
-    // Dynamic greeting based on user local time
-    const hour = new Date().getHours();
-    const localGreeting = hour < 12 ? "Good Morning" : hour < 18 ? "Good Afternoon" : "Good Evening";
-    if (localGreeting !== "Good Evening") {
-      requestAnimationFrame(() => setGreeting(localGreeting));
+    if (savedTheme === "light" || savedTheme === "dark") {
+      setTheme(savedTheme);
     }
 
     // Restore chat history
@@ -121,11 +117,22 @@ export default function Home() {
     }
   }, [messages]);
 
-  // 3. Theme toggle
+  // 3. Theme toggle (Manual user action via sun/moon button only)
   function toggleTheme() {
     const nextTheme = theme === "dark" ? "light" : "dark";
     setTheme(nextTheme);
     localStorage.setItem("astra_theme", nextTheme);
+    if (nextTheme === "light") {
+      document.documentElement.classList.add("light");
+      document.documentElement.classList.remove("dark");
+      document.documentElement.style.backgroundColor = "#845fe2";
+      document.documentElement.style.backgroundImage = "linear-gradient(315deg, #845fe2 0%, #dec9ff 100%)";
+    } else {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+      document.documentElement.style.backgroundColor = "#0b0714";
+      document.documentElement.style.backgroundImage = "none";
+    }
   }
 
   // 4. Start fresh conversation (Local UI reset only, NEVER calls LLM)
@@ -235,72 +242,42 @@ export default function Home() {
 
   const isDark = theme === "dark";
 
-  // Gradient tokens: Keep dark mode (#0b0714) 100% untouched; light mode uses gradient.css: linear-gradient(315deg, #845fe2 0%, #dec9ff 100%)
-  const pageBg = isDark
-    ? "bg-[#0b0714] text-[#ede8f5]"
-    : "text-[#180f2d]";
 
-  const headerBorder = isDark ? "border-purple-900/30 bg-[#0e0a18]/60" : "border-white/30 bg-white/45 backdrop-blur-xl";
+  // Sidebar: Distinct frosted glass panel from sidebarglass.css (blur 32px + specular lines)
+  const sidebarGlass = "sidebar-glass-theme";
 
-  // Sidebar: Distinct frosted glass panel with structured sections
-  const sidebarGlass = isDark
-    ? "bg-[#0f091c]/85 border-purple-500/15 text-[#e5dff0]"
-    : "bg-white/80 border-white/40 text-[#251b36] shadow-xl";
+  // Search/Prompt bar: Elevated glowing glassmorphic card (from glass.css)
+  const promptCardBg = "glass-card-theme";
 
-  // Search/Prompt bar: Elevated glowing glassmorphic card with BorderBeam
-  const promptCardBg = isDark
-    ? "bg-[#140e24]/90 text-[#f5efff]"
-    : "bg-white/95 text-[#180f2d]";
+  // Static chips (decorative, frosted glass pills)
+  const chipGlass = "chip-glass-theme";
 
-  // Static chips (decorative, no pointer click triggers)
-  const chipGlass = isDark
-    ? "bg-white/[0.06] border-white/10 text-[#d4cbde]"
-    : "bg-purple-900/[0.06] border-purple-900/15 text-[#3b2b52]";
-
-  // 3 Feature Cards styling (purely informational showcase, no click trigger)
-  const featureCardClass = `p-4 rounded-2xl border transition-all duration-300 text-left select-none cursor-default backdrop-blur-xl ${
-    isDark
-      ? "bg-[#130c22]/75 border-purple-500/15 shadow-lg shadow-purple-950/20"
-      : "bg-white/85 border-white/60 shadow-lg shadow-purple-900/10 text-[#1f1530]"
-  }`;
+  // 3 Feature Cards styling (glassmorphism from glass.css)
+  const featureCardClass =
+    "p-4 rounded-2xl transition-all duration-300 text-left select-none cursor-default glass-card-theme";
 
   return (
     <div
+      id="app-root"
       suppressHydrationWarning
-      className={`flex h-screen w-full overflow-hidden font-sans transition-colors duration-300 relative ${pageBg}`}
-      style={
-        !isDark
-          ? {
-              backgroundColor: "#845fe2",
-              backgroundImage: "linear-gradient(315deg, #845fe2 0%, #dec9ff 100%)",
-            }
-          : undefined
-      }
+      className="flex h-screen w-full overflow-hidden font-sans relative"
     >
       {/* 🔮 Ambient Purple Aura Background Layer (from purple.css) */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div
-          className={`absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full blur-[140px] opacity-40 transition-all duration-700 ${
-            isDark ? "bg-[#9f4ac9]/30" : "bg-white/20"
-          }`}
+          className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full blur-[140px] opacity-40 transition-all duration-700 aura-blob-1"
         />
         <div
-          className={`absolute -bottom-40 -left-40 w-[650px] h-[650px] rounded-full blur-[160px] opacity-35 transition-all duration-700 ${
-            isDark ? "bg-[#7e4cc9]/30" : "bg-purple-300/25"
-          }`}
+          className="absolute -bottom-40 -left-40 w-[650px] h-[650px] rounded-full blur-[160px] opacity-35 transition-all duration-700 aura-blob-2"
         />
         <div
-          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full blur-[180px] ${
-            isDark
-              ? "bg-gradient-to-r from-purple-600/10 via-fuchsia-600/10 to-indigo-600/10 opacity-30"
-              : "bg-white/15 opacity-20"
-          }`}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full blur-[180px] aura-blob-3"
         />
       </div>
 
       {/* 1. Left Glassmorphic Sidebar */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col justify-between w-64 border-r backdrop-blur-2xl transition-all duration-300 ease-in-out z-20 ${sidebarGlass} ${
+        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col justify-between w-64 transition-all duration-300 ease-in-out z-20 ${sidebarGlass} ${
           isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:-ml-64 shadow-none"
         }`}
       >
@@ -329,11 +306,7 @@ export default function Home() {
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
               placeholder="Search chats"
-              className={`w-full px-3 py-1.5 pl-8 rounded-xl text-xs border outline-none transition placeholder:opacity-50 ${
-                isDark
-                  ? "bg-white/[0.04] border-white/10 focus:border-purple-500/50 text-white"
-                  : "bg-purple-50/60 border-purple-200 focus:border-purple-400 text-purple-950"
-              }`}
+              className="w-full px-3 py-1.5 pl-8 rounded-xl text-xs border outline-none transition sidebar-search-input"
             />
             <svg
               className="w-3.5 h-3.5 absolute left-2.5 top-2.5 opacity-50"
@@ -351,11 +324,7 @@ export default function Home() {
           <div className="pt-1">
             <button
               onClick={handleNewChat}
-              className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-xs font-medium transition shadow-sm ${
-                isDark
-                  ? "bg-purple-500/15 border border-purple-500/30 text-white hover:bg-purple-500/25"
-                  : "bg-purple-100 border border-purple-200 text-purple-950 hover:bg-purple-200/70"
-              }`}
+              className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-xs font-medium transition shadow-sm sidebar-newchat-btn"
             >
               <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -377,8 +346,8 @@ export default function Home() {
               className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium select-none cursor-default border ${
                 messages.length > 0
                   ? isDark
-                    ? "bg-purple-500/10 border-purple-500/30 text-white"
-                    : "bg-purple-100/70 border-purple-300 text-purple-950"
+                    ? "bg-purple-500/15 border-purple-500/30 text-white"
+                    : "bg-white/75 border-white text-[#180f2d] shadow-xs"
                   : "border-transparent opacity-60"
               }`}
             >
@@ -393,38 +362,17 @@ export default function Home() {
             </div>
           </div>
         </div>
-
-        {/* Sidebar Footer: Settings & Preferences Area */}
-        <div className={`p-3 border-t ${isDark ? "border-purple-900/30" : "border-purple-200/50"}`}>
-          <div
-            className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-medium select-none cursor-default ${
-              isDark
-                ? "bg-white/[0.03] border-white/5"
-                : "bg-purple-50/50 border-purple-100"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-sm">⚙️</span>
-              <span>Settings & Tools</span>
-            </div>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono">v1.0</span>
-          </div>
-        </div>
       </aside>
 
       {/* 2. Main Content Area */}
       <div className="flex-1 flex flex-col h-full relative overflow-hidden z-10">
-        {/* Top Header */}
-        <header className={`flex items-center justify-between px-4 py-3 border-b backdrop-blur-xl transition-colors ${headerBorder}`}>
+        {/* Top Header (Floating, no background rectangle bar) */}
+        <header className="flex items-center justify-between px-4 py-3 bg-transparent z-20">
           <div className="flex items-center gap-3">
             {!isSidebarOpen && (
               <button
                 onClick={() => setIsSidebarOpen(true)}
-                className={`p-1.5 rounded-xl border backdrop-blur-md transition ${
-                  isDark
-                    ? "border-purple-500/20 bg-white/5 hover:bg-white/10"
-                    : "border-purple-200 bg-white hover:bg-purple-50"
-                }`}
+                className="p-1.5 rounded-xl backdrop-blur-md transition header-open-btn"
                 title="Open sidebar"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -434,7 +382,7 @@ export default function Home() {
             )}
 
             {/* Model / Assistant Indicator (Static visual badge) */}
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border backdrop-blur-md text-xs font-semibold select-none cursor-default ${chipGlass}`}>
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl backdrop-blur-md text-xs font-semibold select-none cursor-default ${chipGlass}`}>
               <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
               <span>Astra AI Assistant</span>
             </div>
@@ -444,22 +392,19 @@ export default function Home() {
             {/* Theme Toggle in Header (Allowed functional button) */}
             <button
               onClick={toggleTheme}
-              className={`p-2 rounded-full border backdrop-blur-md transition ${
-                isDark
-                  ? "border-purple-500/20 bg-white/5 hover:bg-white/10 text-amber-300"
-                  : "border-white/30 bg-white/80 hover:bg-white text-purple-700 shadow-sm"
-              }`}
+              className="p-2 rounded-full backdrop-blur-md transition theme-toggle-btn"
               title="Toggle theme"
             >
-              {isDark ? (
+              <span className="dark-only">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-              ) : (
+              </span>
+              <span className="light-only">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                 </svg>
-              )}
+              </span>
             </button>
           </div>
         </header>
@@ -474,14 +419,7 @@ export default function Home() {
                 {/* Fluid Dynamic WebGL Orb */}
                 <div className="relative mb-3 flex items-center justify-center select-none">
                   {/* Subtle soft cosmic ambient glow behind fluid orb */}
-                  <div
-                    className="absolute w-52 h-52 rounded-full blur-3xl pointer-events-none opacity-35 transition-all duration-700"
-                    style={{
-                      background: isDark
-                        ? "radial-gradient(circle, #9f4ac9 0%, #7e4cc9 65%, transparent 100%)"
-                        : "radial-gradient(circle, #845fe2 0%, #dec9ff 65%, transparent 100%)",
-                    }}
-                  />
+                  <div className="absolute w-52 h-52 rounded-full blur-3xl pointer-events-none opacity-35 transition-all duration-700 orb-ambient-glow" />
 
                   <FluidOrb
                     size={200}
@@ -490,7 +428,7 @@ export default function Home() {
                   />
                 </div>
 
-                <h1 className="text-3xl md:text-5xl font-medium tracking-tight mb-2">
+                <h1 suppressHydrationWarning className="text-3xl md:text-5xl font-medium tracking-tight mb-2">
                   {greeting}, Aniket.
                 </h1>
                 <p className="text-xl md:text-2xl font-light opacity-80">
@@ -502,26 +440,18 @@ export default function Home() {
               <div className="w-full mt-auto pt-4 pb-2">
                 {/* 1. Pure Floating Glassmorphic Search Bar (No background rectangle) */}
                 <div
-                  className={`w-full rounded-[24px] p-3.5 md:p-4 backdrop-blur-2xl border transition-all shadow-xl hover:shadow-2xl mb-4 ${promptCardBg} ${
-                    isDark
-                      ? "border-purple-500/20 shadow-purple-950/20"
-                      : "border-white/70 shadow-purple-950/15"
-                  }`}
+                  className={`w-full rounded-[24px] p-3.5 md:p-4 transition-all mb-4 ${promptCardBg}`}
                 >
                   {/* Top Action Row (Static visual badges, NO click triggers) */}
                   <div className="flex items-center gap-2 mb-2 select-none">
                     <div
-                      className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-xs font-medium border cursor-default ${chipGlass}`}
+                      className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-xs font-medium cursor-default ${chipGlass}`}
                     >
                       <AtSignIcon />
                       <span className="text-[11px]">Focus Agent</span>
                     </div>
 
-                    <span
-                      className={`text-[11px] font-mono cursor-default transition-colors ${
-                        isDark ? "text-purple-300/60" : "text-purple-950/70 font-medium"
-                      }`}
-                    >
+                    <span className="text-[11px] font-mono cursor-default transition-colors supervisor-text">
                       Astra Multi-Agent Supervisor
                     </span>
                   </div>
@@ -534,26 +464,22 @@ export default function Home() {
                     onKeyDown={handleKeyDown}
                     rows={2}
                     placeholder="Message Astra AI or ask anything..."
-                    className={`w-full bg-transparent resize-none outline-none text-sm md:text-base leading-relaxed py-1 px-1 transition-colors duration-200 ${
-                      isDark
-                        ? "text-zinc-100 placeholder:text-zinc-400 placeholder:opacity-90"
-                        : "text-[#180f2d] placeholder:text-[#523d70] placeholder:opacity-90 font-medium"
-                    }`}
+                    className="w-full bg-transparent resize-none outline-none text-sm md:text-base leading-relaxed py-1 px-1 transition-colors duration-200 prompt-textarea"
                   />
 
                   {/* Bottom Controls Row: Visual Chips & ONLY Send Arrow is Functional */}
-                  <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                  <div className="flex items-center justify-between pt-3 border-t prompt-bottom-border">
                     {/* Static visual chips (NO click events, NO token consumption) */}
                     <div className="flex items-center gap-2 flex-wrap select-none cursor-default">
                       <div
-                        className={`p-1.5 rounded-full border ${chipGlass}`}
+                        className={`p-1.5 rounded-full ${chipGlass}`}
                         title="File Analysis Ready"
                       >
                         <PaperclipIcon />
                       </div>
 
                       <div
-                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium border ${chipGlass}`}
+                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium ${chipGlass}`}
                       >
                         <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <circle cx="10.5" cy="10.5" r="6.5" strokeWidth="2" />
@@ -563,14 +489,14 @@ export default function Home() {
                       </div>
 
                       <div
-                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium border ${chipGlass}`}
+                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium ${chipGlass}`}
                       >
                         <span className="text-purple-400">💻</span>
                         <span>Write code</span>
                       </div>
 
                       <div
-                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium border ${chipGlass}`}
+                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium ${chipGlass}`}
                       >
                         <span className="text-orange-400">📄</span>
                         <span>Summarize</span>
@@ -591,7 +517,7 @@ export default function Home() {
                           ? "text-white shadow-lg shadow-purple-900/50 hover:scale-105 cursor-pointer"
                           : isDark
                           ? "bg-white/10 text-white/30 cursor-not-allowed"
-                          : "bg-purple-100 text-purple-300 cursor-not-allowed"
+                          : "bg-white/40 text-purple-900/40 border border-white/50 cursor-not-allowed"
                       }`}
                       title="Send prompt"
                     >
@@ -608,9 +534,9 @@ export default function Home() {
                       <h3 className="font-semibold text-sm">
                         Multi-Agent Squad
                       </h3>
-                      <span className="text-sm">🤖</span>
+                      <span className="text-sm">✦</span>
                     </div>
-                    <p className="text-xs opacity-60 leading-relaxed">
+                    <p className="text-xs leading-relaxed card-description">
                       5 specialized autonomous agents for coding, web research, document analysis, summarization, and natural conversation.
                     </p>
                   </div>
@@ -623,7 +549,7 @@ export default function Home() {
                       </h3>
                       <span className="text-sm">⚡</span>
                     </div>
-                    <p className="text-xs opacity-60 leading-relaxed">
+                    <p className="text-xs leading-relaxed card-description">
                       Uninterrupted intelligence with automated failover transitioning seamlessly across Groq ➔ OpenRouter ➔ Local Offline Ollama.
                     </p>
                   </div>
@@ -636,7 +562,7 @@ export default function Home() {
                       </h3>
                       <span className="text-sm">🔧</span>
                     </div>
-                    <p className="text-xs opacity-60 leading-relaxed">
+                    <p className="text-xs leading-relaxed card-description">
                       Autonomous tool-calling loop executing live web search with Tavily, real-time timezone clock, calculator, and dataset analysis.
                     </p>
                   </div>
@@ -693,14 +619,12 @@ export default function Home() {
           )}
         </div>
 
-        {/* 4. Bottom Sticky Composer with Glassmorphism & BorderBeam (Active Conversation) */}
+        {/* 4. Bottom Sticky Composer with Glassmorphism (Active Conversation) */}
         {messages.length > 0 && (
-          <footer className={`p-4 border-t backdrop-blur-xl transition-colors ${headerBorder}`}>
+          <footer className="p-4 bg-transparent transition-colors">
             <div className="max-w-3xl mx-auto shadow-xl">
               <div
-                className={`w-full rounded-[22px] p-3 backdrop-blur-2xl border transition-all flex items-end gap-2 ${promptCardBg} ${
-                  isDark ? "border-purple-500/20 shadow-purple-950/20" : "border-white/70 shadow-purple-950/10"
-                }`}
+                className={`w-full rounded-[22px] p-3 transition-all flex items-end gap-2 ${promptCardBg}`}
               >
                 {/* Decorative At icon (static) */}
                 <div
@@ -739,7 +663,7 @@ export default function Home() {
                       ? "text-white shadow-lg shadow-purple-900/50 hover:scale-105 cursor-pointer"
                       : isDark
                       ? "bg-white/10 text-white/30 cursor-not-allowed"
-                      : "bg-purple-100 text-purple-300 cursor-not-allowed"
+                      : "bg-white/40 text-purple-900/40 border border-white/50 cursor-not-allowed"
                   }`}
                   title="Send prompt"
                 >

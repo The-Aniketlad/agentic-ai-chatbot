@@ -1,29 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  --background: #dec9ff;
-  --foreground: #1c1527;
   --light-gradient: linear-gradient(315deg, #845fe2 0%, #dec9ff 100%);
   --purple-gradient: linear-gradient(315deg, #9f4ac9 0%, #7e4cc9 100%);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html.light,
+html.light body,
+html.light #app-root {
+  background-color: #845fe2;
+  background-image: linear-gradient(315deg, #845fe2 0%, #dec9ff 100%) !important;
+  color: #180f2d !important;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0d0818;
-    --foreground: #f3effa;
-  }
+html.dark,
+html.dark body,
+html.dark #app-root {
+  background-color: #0b0714 !important;
+  background-image: none !important;
+  color: #ede8f5 !important;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
   font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   overflow: hidden;
 }
@@ -62,3 +60,483 @@ textarea::placeholder {
 .animate-beam-spin {
   animation: border-beam-spin 7s linear infinite;
 }
+
+/* ========================================================
+   Glassmorphism System (from glass.css)
+   ======================================================== */
+.glass-card-light {
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 
+    0 8px 32px rgba(85, 45, 145, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-card-light::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.9),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.glass-card-light::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.9),
+    transparent,
+    rgba(255, 255, 255, 0.3)
+  );
+  pointer-events: none;
+}
+
+.glass-card-dark {
+  background: rgba(20, 14, 36, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-card-dark::before,
+.glass-card-dark::after {
+  display: none !important;
+}
+
+/* ========================================================
+   Sidebar Matte Glass System (Crisp, Distinct & Separated)
+   ======================================================== */
+.sidebar-glass-light {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border-right: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 
+    6px 0 28px rgba(85, 45, 145, 0.15),
+    inset -1px 0 0 rgba(255, 255, 255, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 0 24px rgba(255, 255, 255, 0.6);
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-glass-light::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.95),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.sidebar-glass-light::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0.8)
+  );
+  pointer-events: none;
+}
+
+.sidebar-glass-dark {
+  background: rgba(20, 13, 38, 0.88);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    8px 0 32px rgba(0, 0, 0, 0.55),
+    inset -1px 0 0 rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 0 24px rgba(159, 74, 201, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-glass-dark::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.45),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.sidebar-glass-dark::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.45),
+    transparent 50%,
+    rgba(255, 255, 255, 0.2)
+  );
+  pointer-events: none;
+}
+
+/* ========================================================
+   Instant CSS Theme Dispatcher (Zero-Flicker on Refresh)
+   ======================================================== */
+html.light .glass-card-theme {
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 
+    0 8px 32px rgba(85, 45, 145, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+  color: #180f2d;
+  position: relative;
+  overflow: hidden;
+}
+
+html.light .glass-card-theme::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.9),
+    transparent
+  );
+  pointer-events: none;
+}
+
+html.light .glass-card-theme::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.9),
+    transparent,
+    rgba(255, 255, 255, 0.3)
+  );
+  pointer-events: none;
+}
+
+html.dark .glass-card-theme {
+  background: rgba(20, 14, 36, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45) !important;
+  color: #f5efff;
+  position: relative;
+  overflow: hidden;
+}
+
+html.dark .glass-card-theme::before,
+html.dark .glass-card-theme::after {
+  display: none !important;
+}
+
+/* Sidebar Theme Dispatcher */
+html.light .sidebar-glass-theme {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border-right: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 
+    6px 0 28px rgba(85, 45, 145, 0.15),
+    inset -1px 0 0 rgba(255, 255, 255, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 0 24px rgba(255, 255, 255, 0.6);
+  color: #251b36;
+  position: relative;
+  overflow: hidden;
+}
+
+html.light .sidebar-glass-theme::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.95),
+    transparent
+  );
+  pointer-events: none;
+}
+
+html.light .sidebar-glass-theme::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0.8)
+  );
+  pointer-events: none;
+}
+
+html.dark .sidebar-glass-theme {
+  background: rgba(20, 13, 38, 0.88);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    8px 0 32px rgba(0, 0, 0, 0.55),
+    inset -1px 0 0 rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 0 24px rgba(159, 74, 201, 0.06);
+  color: #e5dff0;
+  position: relative;
+  overflow: hidden;
+}
+
+html.dark .sidebar-glass-theme::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.45),
+    transparent
+  );
+  pointer-events: none;
+}
+
+html.dark .sidebar-glass-theme::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.45),
+    transparent 50%,
+    rgba(255, 255, 255, 0.2)
+  );
+  pointer-events: none;
+}
+
+/* Visibility toggles for theme icons */
+html.light .dark-only { display: none !important; }
+html.light .light-only { display: inline-block !important; }
+html.dark .light-only { display: none !important; }
+html.dark .dark-only { display: inline-block !important; }
+
+/* Orb Glow & Auras */
+html.light .orb-ambient-glow {
+  background: radial-gradient(circle, #845fe2 0%, #dec9ff 65%, transparent 100%) !important;
+}
+html.dark .orb-ambient-glow {
+  background: radial-gradient(circle, #9f4ac9 0%, #7e4cc9 65%, transparent 100%) !important;
+}
+
+html.light .aura-blob-1 { background-color: rgba(255, 255, 255, 0.2) !important; }
+html.dark .aura-blob-1 { background-color: rgba(159, 74, 201, 0.3) !important; }
+
+html.light .aura-blob-2 { background-color: rgba(216, 180, 254, 0.25) !important; }
+html.dark .aura-blob-2 { background-color: rgba(126, 76, 201, 0.3) !important; }
+
+html.light .aura-blob-3 { background-color: rgba(255, 255, 255, 0.15) !important; opacity: 0.2 !important; }
+html.dark .aura-blob-3 { background-image: linear-gradient(to right, rgba(147, 51, 234, 0.1), rgba(192, 38, 211, 0.1), rgba(79, 70, 229, 0.1)) !important; opacity: 0.3 !important; }
+
+html.light .card-description {
+  color: #2e1d45 !important;
+  opacity: 0.8 !important;
+}
+html.dark .card-description {
+  color: #d4d4d8 !important;
+  opacity: 0.7 !important;
+}
+
+/* Static Chips & Badges */
+html.light .chip-glass-theme {
+  background: rgba(255, 255, 255, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  color: #25153d !important;
+  backdrop-filter: blur(10px);
+}
+html.dark .chip-glass-theme {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #d4cbde !important;
+  backdrop-filter: blur(10px);
+  box-shadow: none !important;
+}
+
+/* Sidebar Search Input */
+html.light .sidebar-search-input {
+  background-color: rgba(255, 255, 255, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  color: #180f2d !important;
+}
+html.light .sidebar-search-input::placeholder {
+  color: rgba(37, 21, 61, 0.6) !important;
+}
+html.dark .sidebar-search-input {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+html.dark .sidebar-search-input::placeholder {
+  color: #71717a !important;
+}
+
+/* Sidebar New Chat Button */
+html.light .sidebar-newchat-btn {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  color: #25123d !important;
+  box-shadow: 0 2px 8px rgba(85, 45, 145, 0.08) !important;
+}
+html.light .sidebar-newchat-btn:hover {
+  background-color: #ffffff !important;
+}
+html.dark .sidebar-newchat-btn {
+  background-color: rgba(147, 51, 234, 0.15) !important;
+  border: 1px solid rgba(168, 85, 247, 0.25) !important;
+  color: #ffffff !important;
+}
+html.dark .sidebar-newchat-btn:hover {
+  background-color: rgba(147, 51, 234, 0.25) !important;
+}
+
+/* Theme Toggle Button in Header */
+html.light .theme-toggle-btn {
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  color: #6b21a8 !important;
+  box-shadow: 0 2px 10px rgba(85, 45, 145, 0.1) !important;
+}
+html.light .theme-toggle-btn:hover {
+  background-color: #ffffff !important;
+}
+html.dark .theme-toggle-btn {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: #fbbf24 !important;
+  box-shadow: none !important;
+}
+html.dark .theme-toggle-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Prompt Textarea & Focus Supervisor Text */
+html.light .prompt-textarea {
+  color: #180f2d !important;
+  font-weight: 500 !important;
+}
+html.light .prompt-textarea::placeholder {
+  color: #523d70 !important;
+  opacity: 0.85 !important;
+}
+html.dark .prompt-textarea {
+  color: #f4f4f5 !important;
+}
+html.dark .prompt-textarea::placeholder {
+  color: #a1a1aa !important;
+  opacity: 0.9 !important;
+}
+
+html.light .supervisor-text {
+  color: rgba(37, 21, 61, 0.8) !important;
+  font-weight: 600 !important;
+}
+html.dark .supervisor-text {
+  color: rgba(216, 180, 254, 0.6) !important;
+}
+
+/* Prompt card bottom border divider */
+html.light .prompt-bottom-border {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+html.dark .prompt-bottom-border {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Open sidebar button in header */
+html.light .header-open-btn {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  color: #25123d !important;
+  box-shadow: 0 2px 8px rgba(85, 45, 145, 0.08) !important;
+}
+html.dark .header-open-btn {
+  border-color: rgba(168, 85, 247, 0.2) !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #e5dff0 !important;
+}
+
+/* Main app root font / text default */
+html.light #app-root {
+  color: #180f2d;
+}
+html.dark #app-root {
+  color: #ffffff;
+}
+
+
+
+

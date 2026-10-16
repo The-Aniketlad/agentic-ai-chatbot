@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     // 2. 🚦 Supervisor Router selects the best specialist agent
     const selectedAgent = await routeUserMessage(lastUserMessage);
-    console.log(`🤖 Supervisor dispatched task to: [${selectedAgent.title}] (${selectedAgent.name})`);
+    console.log(`✦ Supervisor dispatched task to: [${selectedAgent.title}] (${selectedAgent.name})`);
 
     // 3. Run specialist agent with assigned persona and tools
     const { content, provider, model } = await runAgent(
