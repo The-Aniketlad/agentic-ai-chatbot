@@ -45,6 +45,33 @@ function PaperclipIcon() {
   );
 }
 
+function SquadIcon() {
+  return (
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function CascadeIcon() {
+  return (
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  );
+}
+
+function ToolsIcon() {
+  return (
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+    </svg>
+  );
+}
+
 function AstraLogo({ className = "w-6 h-6", fill = "#ea580c" }: { className?: string; fill?: string }) {
   return (
     <svg
@@ -536,7 +563,9 @@ export default function Home() {
                       <h3 className="font-semibold text-sm">
                         Multi-Agent Squad
                       </h3>
-                      <span className="text-sm">✦</span>
+                      <div className="feature-icon-box feature-icon-purple" aria-hidden="true">
+                        <SquadIcon />
+                      </div>
                     </div>
                     <p className="text-xs leading-relaxed card-description">
                       5 specialized autonomous agents for coding, web research, document analysis, summarization, and natural conversation.
@@ -549,7 +578,9 @@ export default function Home() {
                       <h3 className="font-semibold text-sm">
                         Fail-Safe Cascade
                       </h3>
-                      <span className="text-sm">⚡</span>
+                      <div className="feature-icon-box feature-icon-amber" aria-hidden="true">
+                        <CascadeIcon />
+                      </div>
                     </div>
                     <p className="text-xs leading-relaxed card-description">
                       Uninterrupted intelligence with automated failover transitioning seamlessly across Groq ➔ OpenRouter ➔ Local Offline Ollama.
@@ -562,7 +593,9 @@ export default function Home() {
                       <h3 className="font-semibold text-sm">
                         Autonomous Tools
                       </h3>
-                      <span className="text-sm">🔧</span>
+                      <div className="feature-icon-box feature-icon-cyan" aria-hidden="true">
+                        <ToolsIcon />
+                      </div>
                     </div>
                     <p className="text-xs leading-relaxed card-description">
                       Autonomous tool-calling loop executing live web search with Tavily, real-time timezone clock, calculator, and dataset analysis.
