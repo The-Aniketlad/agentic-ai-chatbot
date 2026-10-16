@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import FluidOrb from "@/components/ui/fluid-orb";
+import { BotIcon } from "@animateicons/react/lucide";
 
 type Message = {
   role: "user" | "assistant";
@@ -107,10 +108,16 @@ export default function Home() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const botIconRef = useRef<{ startAnimation: () => void; stopAnimation: () => void } | null>(null);
 
   // 1. Mount: Hydrate client preferences cleanly without hydration mismatch
   useEffect(() => {
     isMountedRef.current = true;
+
+    // Trigger welcoming bot animation shortly after mount
+    const botTimer = setTimeout(() => {
+      botIconRef.current?.startAnimation();
+    }, 600);
 
     // Calculate client local greeting safely inside useEffect (satisfies Next.js 16 prerender rule)
     const hour = new Date().getHours();
@@ -134,6 +141,8 @@ export default function Home() {
         console.error("Failed to restore history:", err);
       }
     }
+
+    return () => clearTimeout(botTimer);
   }, []);
 
   // 2. Persist chat history and auto-scroll
@@ -410,28 +419,62 @@ export default function Home() {
               </button>
             )}
 
-            {/* Model / Assistant Indicator (Static visual badge) */}
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl backdrop-blur-md text-xs font-semibold select-none cursor-default ${chipGlass}`}>
-              <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+            {/* Model / Assistant Indicator (Interactive animated Bot badge) */}
+            <div
+              onMouseEnter={() => botIconRef.current?.startAnimation()}
+              onMouseLeave={() => botIconRef.current?.stopAnimation()}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl backdrop-blur-md text-xs font-semibold select-none cursor-default group transition-all duration-200 ${chipGlass}`}
+            >
+              <BotIcon
+                ref={botIconRef}
+                size={16}
+                duration={1}
+                color={isDark ? "#a78bfa" : "#7c3aed"}
+                className="flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
+              />
               <span>Astra AI Assistant</span>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Theme Toggle in Header (Allowed functional button) */}
+            {/* Morphing Glass Theme Toggle (Raycast / Vercel Style) */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-full backdrop-blur-md transition theme-toggle-btn"
-              title="Toggle theme"
+              className="theme-toggle-btn"
+              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              aria-label="Toggle theme"
             >
-              <span className="dark-only">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              {/* Sun Icon (Visible in Dark Mode -> click switches to light) */}
+              <span className="theme-toggle-icon dark-only">
+                <svg
+                  className="w-4 h-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="4" fill="currentColor" fillOpacity="0.25" />
+                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
                 </svg>
               </span>
-              <span className="light-only">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              {/* Moon Icon (Visible in Light Mode -> click switches to dark) */}
+              <span className="theme-toggle-icon light-only">
+                <svg
+                  className="w-4 h-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path
+                    d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                    fill="currentColor"
+                    fillOpacity="0.2"
+                  />
                 </svg>
               </span>
             </button>
@@ -461,7 +504,7 @@ export default function Home() {
                   {greeting}, Aniket.
                 </h1>
                 <p className="text-xl md:text-2xl font-light opacity-80">
-                  Can I help you with anything ?
+                  How can I help you today?
                 </p>
               </div>
 
