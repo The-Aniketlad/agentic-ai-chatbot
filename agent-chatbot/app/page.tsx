@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import FluidOrb from "@/components/ui/fluid-orb";
 import { BotIcon } from "@animateicons/react/lucide";
+import { ModelPicker } from "@/components/ui/model-picker";
+import { FileUploadCard, UploadedFile } from "@/components/ui/file-upload-card";
 
 type Message = {
   role: "user" | "assistant";
@@ -105,10 +107,57 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [greeting, setGreeting] = useState("Good Afternoon");
   const [searchFilter, setSearchFilter] = useState("");
+  const [selectedProvider, setSelectedProvider] = useState<"groq" | "openrouter" | "auto">("groq");
+  const [selectedModel, setSelectedModel] = useState<string>("openai/gpt-oss-20b");
+  const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<UploadedFile[]>([]);
+  const [activeTrigger, setActiveTrigger] = useState<"hero" | "footer">("hero");
+  const paperclipBtnRef = useRef<HTMLButtonElement>(null);
+  const footerPaperclipBtnRef = useRef<HTMLButtonElement>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const botIconRef = useRef<{ startAnimation: () => void; stopAnimation: () => void } | null>(null);
+
+  // Handle adding new files (pure local state, ZERO token consumption)
+  function handleFilesChange(newFiles: File[]) {
+    const formattedFiles: UploadedFile[] = newFiles.map((file) => ({
+      id: `${file.name}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      file,
+      progress: 0,
+      status: "uploading",
+    }));
+
+    setAttachedFiles((prev) => [...prev, ...formattedFiles]);
+  }
+
+  // Smooth progress animation simulation (0% -> 100%)
+  useEffect(() => {
+    const uploadingFiles = attachedFiles.filter((f) => f.status === "uploading");
+    if (uploadingFiles.length === 0) return;
+
+    const interval = setInterval(() => {
+      setAttachedFiles((prev) =>
+        prev.map((f) => {
+          if (f.status === "uploading") {
+            const nextProgress = Math.min(f.progress + 30, 100);
+            return {
+              ...f,
+              progress: nextProgress,
+              status: nextProgress >= 100 ? "completed" : "uploading",
+            };
+          }
+          return f;
+        })
+      );
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, [attachedFiles]);
+
+  function handleFileRemove(id: string) {
+    setAttachedFiles((prev) => prev.filter((f) => f.id !== id));
+  }
 
   // 1. Mount: Hydrate client preferences cleanly without hydration mismatch
   useEffect(() => {
@@ -193,11 +242,21 @@ export default function Home() {
     }
   }
 
-  // STRICT: Only sends what the user physically typed in `input`!
-  // No overridePrompt parameter, zero automated triggers from other buttons.
+  // STRICT: Only sends what the user physically typed in `input` (and file names if attached)!
+  // No automated triggers from clicking attach files, zero token waste on upload.
   async function handleSubmit() {
-    const promptToSend = input.trim();
-    if (!promptToSend || isLoading) return;
+    let promptToSend = input.trim();
+    if (!promptToSend && attachedFiles.length === 0) return;
+    if (isLoading) return;
+
+    if (attachedFiles.length > 0) {
+      const fileNames = attachedFiles.map((f) => f.file.name).join(", ");
+      promptToSend = promptToSend
+        ? `${promptToSend}\n\n[Attached File(s): ${fileNames}]`
+        : `[Attached File(s): ${fileNames}] Please analyze these documents.`;
+      setAttachedFiles([]);
+      setIsFileUploadOpen(false);
+    }
 
     setInput("");
     if (textareaRef.current) {
@@ -221,7 +280,11 @@ export default function Home() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({
+          messages: apiMessages,
+          preferredProvider: selectedProvider,
+          preferredModel: selectedModel,
+        }),
       });
 
       if (!res.ok) {
@@ -541,17 +604,48 @@ export default function Home() {
 
                   {/* Bottom Controls Row: Visual Chips & ONLY Send Arrow is Functional */}
                   <div className="flex items-center justify-between pt-3 border-t prompt-bottom-border">
-                    {/* Static visual chips (NO click events, NO token consumption) */}
-                    <div className="flex items-center gap-2 flex-wrap select-none cursor-default">
-                      <div
-                        className={`p-1.5 rounded-full ${chipGlass}`}
-                        title="File Analysis Ready"
+                    {/* Visual chips & Model Picker */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Interactive Paperclip Attach Button (Zero token cost, safe click) */}
+                      <button
+                        ref={paperclipBtnRef}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setActiveTrigger("hero");
+                          setIsFileUploadOpen((prev) => !prev);
+                        }}
+                        className={`relative p-1.5 rounded-full transition-all duration-200 cursor-pointer ${chipGlass} ${
+                          attachedFiles.length > 0 ? "ring-2 ring-purple-400 bg-purple-500/20" : ""
+                        }`}
+                        title={
+                          attachedFiles.length > 0
+                            ? `${attachedFiles.length} file(s) attached - click to view`
+                            : "Attach documents or files"
+                        }
                       >
                         <PaperclipIcon />
-                      </div>
+                        {attachedFiles.length > 0 && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-purple-600 text-white text-[9px] font-bold flex items-center justify-center shadow-sm">
+                            {attachedFiles.length}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* AI Agent / Model Provider Dropdown Picker */}
+                      <ModelPicker
+                        selectedProvider={selectedProvider}
+                        selectedModel={selectedModel}
+                        onSelect={(provider, modelId) => {
+                          setSelectedProvider(provider);
+                          setSelectedModel(modelId);
+                        }}
+                        isDark={isDark}
+                      />
 
                       <div
-                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium ${chipGlass}`}
+                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium select-none cursor-default ${chipGlass}`}
                       >
                         <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <circle cx="10.5" cy="10.5" r="6.5" strokeWidth="2" />
@@ -578,14 +672,14 @@ export default function Home() {
                     {/* Submit Pill Button (FUNCTIONAL: Only clicking this sends the typed prompt) */}
                     <button
                       onClick={() => handleSubmit()}
-                      disabled={!input.trim() || isLoading}
+                      disabled={(!input.trim() && attachedFiles.length === 0) || isLoading}
                       style={
-                        input.trim() && !isLoading
+                        (input.trim() || attachedFiles.length > 0) && !isLoading
                           ? { background: "linear-gradient(315deg, #9f4ac9 0%, #7e4cc9 100%)" }
                           : undefined
                       }
                       className={`w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
-                        input.trim() && !isLoading
+                        (input.trim() || attachedFiles.length > 0) && !isLoading
                           ? "text-white shadow-lg shadow-purple-900/50 hover:scale-105 cursor-pointer"
                           : isDark
                           ? "bg-white/10 text-white/30 cursor-not-allowed"
@@ -704,12 +798,43 @@ export default function Home() {
               <div
                 className={`w-full rounded-[22px] p-3 transition-all flex items-end gap-2 ${promptCardBg}`}
               >
-                {/* Decorative At icon (static) */}
-                <div
-                  className={`h-7 w-7 rounded-full flex items-center justify-center border flex-shrink-0 select-none cursor-default ${chipGlass}`}
+                {/* Interactive Paperclip button in footer */}
+                <button
+                  ref={footerPaperclipBtnRef}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setActiveTrigger("footer");
+                    setIsFileUploadOpen((prev) => !prev);
+                  }}
+                  className={`h-7 w-7 relative rounded-full flex items-center justify-center border flex-shrink-0 transition-all duration-200 cursor-pointer ${chipGlass} ${
+                    attachedFiles.length > 0 ? "ring-2 ring-purple-400 bg-purple-500/20" : ""
+                  }`}
+                  title={
+                    attachedFiles.length > 0
+                      ? `${attachedFiles.length} file(s) attached`
+                      : "Attach documents or files"
+                  }
                 >
-                  <AtSignIcon />
-                </div>
+                  <PaperclipIcon />
+                  {attachedFiles.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-purple-600 text-white text-[8px] font-bold flex items-center justify-center shadow-sm">
+                      {attachedFiles.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* AI Agent / Model Provider Dropdown Picker */}
+                <ModelPicker
+                  selectedProvider={selectedProvider}
+                  selectedModel={selectedModel}
+                  onSelect={(provider, modelId) => {
+                    setSelectedProvider(provider);
+                    setSelectedModel(modelId);
+                  }}
+                  isDark={isDark}
+                />
 
                 {/* Textarea (FUNCTIONAL - high contrast & immediately visible on theme switch) */}
                 <textarea
@@ -730,14 +855,14 @@ export default function Home() {
                 {/* Submit Button (FUNCTIONAL) */}
                 <button
                   onClick={() => handleSubmit()}
-                  disabled={!input.trim() || isLoading}
+                  disabled={(!input.trim() && attachedFiles.length === 0) || isLoading}
                   style={
-                    input.trim() && !isLoading
+                    (input.trim() || attachedFiles.length > 0) && !isLoading
                       ? { background: "linear-gradient(315deg, #9f4ac9 0%, #7e4cc9 100%)" }
                       : undefined
                   }
                   className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center transition-all ${
-                    input.trim() && !isLoading
+                    (input.trim() || attachedFiles.length > 0) && !isLoading
                       ? "text-white shadow-lg shadow-purple-900/50 hover:scale-105 cursor-pointer"
                       : isDark
                       ? "bg-white/10 text-white/30 cursor-not-allowed"
@@ -751,6 +876,17 @@ export default function Home() {
             </div>
           </footer>
         )}
+
+        {/* File Upload Card Modal (Portaled outside, opens upwards) */}
+        <FileUploadCard
+          isOpen={isFileUploadOpen}
+          onClose={() => setIsFileUploadOpen(false)}
+          files={attachedFiles}
+          onFilesChange={handleFilesChange}
+          onFileRemove={handleFileRemove}
+          triggerRef={activeTrigger === "hero" ? paperclipBtnRef : footerPaperclipBtnRef}
+          isDark={isDark}
+        />
       </div>
     </div>
   );

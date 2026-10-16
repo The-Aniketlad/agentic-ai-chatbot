@@ -12,7 +12,9 @@ export type AgentResult = {
 export async function runAgent(
   messages: OpenAI.ChatCompletionMessageParam[],
   systemPrompt: string = "You are an intelligent AI agent with access to real-time tools...",
-  agentTools: OpenAI.ChatCompletionTool[] = tools // 👈 Yeh naya parameter add karo
+  agentTools: OpenAI.ChatCompletionTool[] = tools,
+  preferredProvider?: string,
+  preferredModel?: string
 ): Promise<AgentResult> {
   // 1. Prepare conversation array with system prompt
   const convo: OpenAI.ChatCompletionMessageParam[] = [
@@ -25,8 +27,13 @@ export async function runAgent(
   for (let step = 0; step < MAX_STEPS; step++) {
     console.log(`✦ Agent Loop: Step ${step + 1}/${MAX_STEPS}...`);
 
-    // 2. Call our multi-provider fallback engine with available tools
-    const res = await chat(convo, { tools: agentTools.length > 0 ? agentTools : undefined });
+    // 2. Call our multi-provider fallback engine with available tools and preferred provider
+    const res = await chat(
+      convo,
+      { tools: agentTools.length > 0 ? agentTools : undefined },
+      preferredProvider,
+      preferredModel
+    );
     const message = res.rawMessage;
 
     // 3. Agar model ne Tools call kiye hain:

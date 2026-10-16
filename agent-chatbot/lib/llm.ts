@@ -34,15 +34,29 @@ export const providers: Provider[] = [
   },
 ];
 
-// 2. Chat function with automatic failover
+// 2. Chat function with automatic failover & provider preference
 export async function chat(
   messages: OpenAI.ChatCompletionMessageParam[],
-  extra: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> = {}
+  extra: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> = {},
+  preferredProvider?: string,
+  preferredModel?: string
 ) {
-  for (const p of providers) {
+  let orderedProviders = [...providers];
+
+  // If user selected a specific provider, prioritize it first with preferred model
+  if (preferredProvider && preferredProvider !== "auto") {
+    const target = orderedProviders.find((p) => p.name.toLowerCase() === preferredProvider.toLowerCase());
+    if (target) {
+      const activeModel = preferredModel || target.model;
+      const rest = orderedProviders.filter((p) => p.name.toLowerCase() !== preferredProvider.toLowerCase());
+      orderedProviders = [{ ...target, model: activeModel }, ...rest];
+    }
+  }
+
+  for (const p of orderedProviders) {
     try {
       console.log(`⏳ Trying provider: [${p.name}] with model: ${p.model}...`);
-            // 'as OpenAI.ChatCompletion' lagane se TypeScript ko pata chal jata hai ki ye normal text response hai!
+      // 'as OpenAI.ChatCompletion' lagane se TypeScript ko pata chal jata hai ki ye normal text response hai!
       const res = (await p.client.chat.completions.create({
         model: p.model,
         messages,
@@ -56,7 +70,7 @@ export async function chat(
         provider: p.name,
         model: p.model,
       };
-        } catch (err: unknown) {
+    } catch (err: unknown) {
       const error = err as { status?: number; message?: string };
       console.warn(`⚠️ [${p.name}] failed (Status: ${error?.status || error?.message}), falling back to next provider...`);
     }

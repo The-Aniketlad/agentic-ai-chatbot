@@ -4,7 +4,7 @@ import { routeUserMessage } from "@/lib/router";
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = await req.json();
+    const { messages, preferredProvider, preferredModel } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return new Response("Invalid messages array", { status: 400 });
@@ -23,11 +23,13 @@ export async function POST(req: NextRequest) {
     const selectedAgent = await routeUserMessage(lastUserMessage);
     console.log(`✦ Supervisor dispatched task to: [${selectedAgent.title}] (${selectedAgent.name})`);
 
-    // 3. Run specialist agent with assigned persona and tools
+    // 3. Run specialist agent with assigned persona, tools, and user's chosen provider
     const { content, provider, model } = await runAgent(
       windowedMessages,
       selectedAgent.systemPrompt,
-      selectedAgent.tools
+      selectedAgent.tools,
+      preferredProvider,
+      preferredModel
     );
 
     // 2. Stream the agent's final answer smoothly to the UI
