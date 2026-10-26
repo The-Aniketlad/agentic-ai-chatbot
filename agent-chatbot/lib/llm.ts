@@ -39,7 +39,9 @@ export async function chat(
   messages: OpenAI.ChatCompletionMessageParam[],
   extra: Partial<OpenAI.ChatCompletionCreateParamsNonStreaming> = {},
   preferredProvider?: string,
-  preferredModel?: string
+  preferredModel?: string,
+  customGroqKey?: string,
+  customOpenRouterKey?: string
 ) {
   let orderedProviders = [...providers];
 
@@ -56,8 +58,23 @@ export async function chat(
   for (const p of orderedProviders) {
     try {
       console.log(`⏳ Trying provider: [${p.name}] with model: ${p.model}...`);
+
+      // Use user's custom BYOK key if provided, otherwise default to Astra's key
+      let client = p.client;
+      if (p.name === "groq" && customGroqKey) {
+        client = new OpenAI({
+          baseURL: "https://api.groq.com/openai/v1",
+          apiKey: customGroqKey,
+        });
+      } else if (p.name === "openrouter" && customOpenRouterKey) {
+        client = new OpenAI({
+          baseURL: "https://openrouter.ai/api/v1",
+          apiKey: customOpenRouterKey,
+        });
+      }
+
       // 'as OpenAI.ChatCompletion' lagane se TypeScript ko pata chal jata hai ki ye normal text response hai!
-      const res = (await p.client.chat.completions.create({
+      const res = (await client.chat.completions.create({
         model: p.model,
         messages,
         ...extra,

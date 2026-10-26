@@ -5,6 +5,10 @@ import FluidOrb from "@/components/ui/fluid-orb";
 import { BotIcon } from "@animateicons/react/lucide";
 import { ModelPicker } from "@/components/ui/model-picker";
 import { FileUploadCard, UploadedFile } from "@/components/ui/file-upload-card";
+import { AccountSettingsDropdown } from "@/components/ui/account-settings-dropdown";
+import { ClearHistoryDropdown } from "@/components/ui/clear-history-dropdown";
+import { ApiKeysModal } from "@/components/ui/api-keys-modal";
+import { AiResponseSettingsModal } from "@/components/ui/ai-response-settings-modal";
 
 type Message = {
   role: "user" | "assistant";
@@ -110,6 +114,8 @@ export default function Home() {
   const [selectedProvider, setSelectedProvider] = useState<"groq" | "openrouter" | "auto">("groq");
   const [selectedModel, setSelectedModel] = useState<string>("openai/gpt-oss-20b");
   const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
+  const [isApiKeysModalOpen, setIsApiKeysModalOpen] = useState(false);
+  const [isResponseSettingsOpen, setIsResponseSettingsOpen] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<UploadedFile[]>([]);
   const [activeTrigger, setActiveTrigger] = useState<"hero" | "footer">("hero");
   const paperclipBtnRef = useRef<HTMLButtonElement>(null);
@@ -277,6 +283,13 @@ export default function Home() {
         content,
       }));
 
+      const customGroqKey = typeof window !== "undefined" ? localStorage.getItem("astra_custom_groq_key") || undefined : undefined;
+      const customOpenRouterKey = typeof window !== "undefined" ? localStorage.getItem("astra_custom_openrouter_key") || undefined : undefined;
+      const temperature = typeof window !== "undefined" && localStorage.getItem("astra_ai_temperature") ? parseFloat(localStorage.getItem("astra_ai_temperature")!) : 0.7;
+      const tone = typeof window !== "undefined" ? localStorage.getItem("astra_ai_tone") || "friendly" : "friendly";
+      const customInstructions = typeof window !== "undefined" ? localStorage.getItem("astra_ai_custom_instructions") || undefined : undefined;
+      const showReasoning = typeof window !== "undefined" ? localStorage.getItem("astra_ai_show_reasoning") !== "false" : true;
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -284,6 +297,12 @@ export default function Home() {
           messages: apiMessages,
           preferredProvider: selectedProvider,
           preferredModel: selectedModel,
+          customGroqKey,
+          customOpenRouterKey,
+          temperature,
+          tone,
+          customInstructions,
+          showReasoning,
         }),
       });
 
@@ -436,11 +455,13 @@ export default function Home() {
 
           {/* Recent Sessions List */}
           <div className="flex flex-col space-y-1.5 pt-3">
-            <div className="flex items-center justify-between px-2 select-none">
+            <div className="flex items-center justify-between px-2 select-none min-h-[22px]">
               <span className="text-[10px] font-bold tracking-wider uppercase opacity-50">
                 Recent Sessions
               </span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              {messages.length > 0 && (
+                <ClearHistoryDropdown onClearAll={handleNewChat} isDark={isDark} />
+              )}
             </div>
 
             <div
@@ -462,6 +483,15 @@ export default function Home() {
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Sidebar Footer: Account & Settings */}
+        <div className="p-3 border-t border-purple-500/15">
+          <AccountSettingsDropdown
+            isDark={isDark}
+            onOpenApiKeys={() => setIsApiKeysModalOpen(true)}
+            onOpenResponseSettings={() => setIsResponseSettingsOpen(true)}
+          />
         </div>
       </aside>
 
@@ -885,6 +915,20 @@ export default function Home() {
           onFilesChange={handleFilesChange}
           onFileRemove={handleFileRemove}
           triggerRef={activeTrigger === "hero" ? paperclipBtnRef : footerPaperclipBtnRef}
+          isDark={isDark}
+        />
+
+        {/* Custom API Keys (BYOK) Modal */}
+        <ApiKeysModal
+          isOpen={isApiKeysModalOpen}
+          onClose={() => setIsApiKeysModalOpen(false)}
+          isDark={isDark}
+        />
+
+        {/* AI Response Settings Modal */}
+        <AiResponseSettingsModal
+          isOpen={isResponseSettingsOpen}
+          onClose={() => setIsResponseSettingsOpen(false)}
           isDark={isDark}
         />
       </div>

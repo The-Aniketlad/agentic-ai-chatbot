@@ -4,7 +4,16 @@ import { routeUserMessage } from "@/lib/router";
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, preferredProvider, preferredModel } = await req.json();
+    const {
+      messages,
+      preferredProvider,
+      preferredModel,
+      customGroqKey,
+      customOpenRouterKey,
+      temperature,
+      tone,
+      customInstructions,
+    } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return new Response("Invalid messages array", { status: 400 });
@@ -15,7 +24,6 @@ export async function POST(req: NextRequest) {
       ? messages.slice(-MAX_HISTORY) 
       : messages;
 
-
     // 1. Get latest user prompt
     const lastUserMessage = [...windowedMessages].reverse().find((m) => m.role === "user")?.content || "";
 
@@ -23,13 +31,35 @@ export async function POST(req: NextRequest) {
     const selectedAgent = await routeUserMessage(lastUserMessage);
     console.log(`✦ Supervisor dispatched task to: [${selectedAgent.title}] (${selectedAgent.name})`);
 
-    // 3. Run specialist agent with assigned persona, tools, and user's chosen provider
+    // 3. Augment systemPrompt with user response style and custom instructions
+    let effectiveSystemPrompt = selectedAgent.systemPrompt;
+
+    if (tone) {
+      const toneDirectives: Record<string, string> = {
+        concise: "TONE & STYLE REQUIREMENT: Be extremely concise, direct, and to the point. Prefer bullet points over long paragraphs. Eliminate conversational filler.",
+        professional: "TONE & STYLE REQUIREMENT: Maintain an executive, formal, and polished corporate tone with clear structure and thorough analysis.",
+        friendly: "TONE & STYLE REQUIREMENT: Speak in a warm, friendly, encouraging, and collaborative tone while remaining helpful and accurate.",
+        developer: "TONE & STYLE REQUIREMENT: Act as a Principal Staff Software Engineer & System Architect. Provide production-ready code with TypeScript types, architectural insights, and edge cases.",
+      };
+      if (toneDirectives[tone]) {
+        effectiveSystemPrompt += `\n\n${toneDirectives[tone]}`;
+      }
+    }
+
+    if (customInstructions && typeof customInstructions === "string" && customInstructions.trim()) {
+      effectiveSystemPrompt += `\n\nUSER PERSISTENT INSTRUCTIONS:\n${customInstructions.trim()}`;
+    }
+
+    // 4. Run specialist agent with assigned persona, tools, preferred provider, and custom temperature
     const { content, provider, model } = await runAgent(
       windowedMessages,
-      selectedAgent.systemPrompt,
+      effectiveSystemPrompt,
       selectedAgent.tools,
       preferredProvider,
-      preferredModel
+      preferredModel,
+      customGroqKey,
+      customOpenRouterKey,
+      typeof temperature === "number" ? temperature : 0.7
     );
 
     // 2. Stream the agent's final answer smoothly to the UI

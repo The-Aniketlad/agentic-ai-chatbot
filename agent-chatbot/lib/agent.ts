@@ -14,7 +14,10 @@ export async function runAgent(
   systemPrompt: string = "You are an intelligent AI agent with access to real-time tools...",
   agentTools: OpenAI.ChatCompletionTool[] = tools,
   preferredProvider?: string,
-  preferredModel?: string
+  preferredModel?: string,
+  customGroqKey?: string,
+  customOpenRouterKey?: string,
+  temperature?: number
 ): Promise<AgentResult> {
   // 1. Prepare conversation array with system prompt
   const convo: OpenAI.ChatCompletionMessageParam[] = [
@@ -30,9 +33,14 @@ export async function runAgent(
     // 2. Call our multi-provider fallback engine with available tools and preferred provider
     const res = await chat(
       convo,
-      { tools: agentTools.length > 0 ? agentTools : undefined },
+      {
+        tools: agentTools.length > 0 ? agentTools : undefined,
+        temperature: typeof temperature === "number" ? temperature : 0.7,
+      },
       preferredProvider,
-      preferredModel
+      preferredModel,
+      customGroqKey,
+      customOpenRouterKey
     );
     const message = res.rawMessage;
 
