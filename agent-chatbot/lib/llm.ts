@@ -41,12 +41,32 @@ export async function chat(
   preferredProvider?: string,
   preferredModel?: string,
   customGroqKey?: string,
-  customOpenRouterKey?: string
+  customOpenRouterKey?: string,
+  customAgentKey?: string
 ) {
   let orderedProviders = [...providers];
 
-  // If user selected a specific provider, prioritize it first with preferred model
-  if (preferredProvider && preferredProvider !== "auto") {
+  // If user selected Custom Agent and provided a private custom key
+  if (preferredProvider === "custom" && customAgentKey) {
+    const isGroq = customAgentKey.startsWith("gsk_");
+    const isOpenRouter = customAgentKey.startsWith("sk-or-");
+    const baseURL = isGroq
+      ? "https://api.groq.com/openai/v1"
+      : isOpenRouter
+      ? "https://openrouter.ai/api/v1"
+      : "https://openrouter.ai/api/v1";
+    const customModel = isGroq ? "llama-3.3-70b-versatile" : "openai/gpt-4o-mini";
+    const activeModel = preferredModel && preferredModel !== "custom-agent" ? preferredModel : customModel;
+
+    orderedProviders.unshift({
+      name: "Custom Agent",
+      client: new OpenAI({
+        baseURL,
+        apiKey: customAgentKey,
+      }),
+      model: activeModel,
+    });
+  } else if (preferredProvider && preferredProvider !== "auto" && preferredProvider !== "custom") {
     const target = orderedProviders.find((p) => p.name.toLowerCase() === preferredProvider.toLowerCase());
     if (target) {
       const activeModel = preferredModel || target.model;
@@ -61,7 +81,9 @@ export async function chat(
 
       // Use user's custom BYOK key if provided, otherwise default to Astra's key
       let client = p.client;
-      if (p.name === "groq" && customGroqKey) {
+      if (p.name === "Custom Agent") {
+        client = p.client;
+      } else if (p.name === "groq" && customGroqKey) {
         client = new OpenAI({
           baseURL: "https://api.groq.com/openai/v1",
           apiKey: customGroqKey,

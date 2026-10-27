@@ -2,7 +2,17 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { SlidersHorizontalIcon } from "@animateicons/react/lucide";
+import {
+  SlidersHorizontalIcon,
+  ListIcon,
+  type ListIconHandle,
+  SquareUserIcon,
+  type SquareUserIconHandle,
+  BotIcon,
+  type BotIconHandle,
+  CodeXmlIcon,
+  type CodeXmlIconHandle,
+} from "@animateicons/react/lucide";
 import {
   CheckmarkCircle01Icon,
   type CheckmarkCircle01IconHandle,
@@ -46,6 +56,24 @@ export function AiResponseSettingsModal({
   const [savedSuccess, setSavedSuccess] = useState(false);
   const bannerIconRef = useRef<CheckmarkCircle01IconHandle>(null);
   const sliderIconRef = useRef<{ startAnimation: () => void; stopAnimation: () => void } | null>(null);
+  const conciseIconRef = useRef<ListIconHandle>(null);
+  const professionalIconRef = useRef<SquareUserIconHandle>(null);
+  const friendlyIconRef = useRef<BotIconHandle>(null);
+  const developerIconRef = useRef<CodeXmlIconHandle>(null);
+
+  const [isSliding, setIsSliding] = useState(false);
+  const slidingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSliderChange = (newVal: number) => {
+    setTemperature(newVal);
+    setIsSliding(true);
+    if (slidingTimeoutRef.current) {
+      clearTimeout(slidingTimeoutRef.current);
+    }
+    slidingTimeoutRef.current = setTimeout(() => {
+      setIsSliding(false);
+    }, 700);
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -146,9 +174,62 @@ export function AiResponseSettingsModal({
   const tempPercent = Math.min(100, Math.max(0, Math.round(temperature * 100)));
 
   const getTempLabel = (val: number) => {
-    if (val <= 0.35) return { label: "Precise", desc: "Deterministic & factual", color: "text-blue-400" };
-    if (val <= 0.75) return { label: "Balanced", desc: "Natural & conversational", color: "text-purple-400" };
-    return { label: "Creative", desc: "Imaginative & exploratory", color: "text-amber-400" };
+    if (val <= 0.35) {
+      return {
+        label: "Precise",
+        desc: "Deterministic & factual",
+        color: "text-sky-400",
+        hex: "#38bdf8",
+        rgb: "56, 189, 248",
+        badgeBorder: isDark ? "border-sky-500/40" : "border-sky-300",
+        badgeBg: isDark ? "bg-sky-950/50" : "bg-sky-50",
+        badgeText: isDark ? "text-sky-300" : "text-sky-900",
+        badgeGlow: isSliding
+          ? "0 0 16px rgba(56, 189, 248, 0.55)"
+          : "0 0 8px rgba(56, 189, 248, 0.2)",
+      };
+    }
+    if (val <= 0.75) {
+      return {
+        label: "Balanced",
+        desc: "Natural & conversational",
+        color: "text-purple-400",
+        hex: "#a855f7",
+        rgb: "168, 85, 247",
+        badgeBorder: isDark ? "border-purple-500/40" : "border-purple-300",
+        badgeBg: isDark ? "bg-purple-950/50" : "bg-purple-50",
+        badgeText: isDark ? "text-purple-300" : "text-purple-900",
+        badgeGlow: isSliding
+          ? "0 0 16px rgba(168, 85, 247, 0.55)"
+          : "0 0 8px rgba(168, 85, 247, 0.2)",
+      };
+    }
+    return {
+      label: "Creative",
+      desc: "Imaginative & exploratory",
+      color: "text-amber-400",
+      hex: "#f59e0b",
+      rgb: "245, 158, 11",
+      badgeBorder: isDark ? "border-amber-500/40" : "border-amber-300",
+      badgeBg: isDark ? "bg-amber-950/50" : "bg-amber-50",
+      badgeText: isDark ? "text-amber-300" : "text-amber-900",
+      badgeGlow: isSliding
+        ? "0 0 16px rgba(245, 158, 11, 0.55)"
+        : "0 0 8px rgba(245, 158, 11, 0.2)",
+    };
+  };
+
+  const getTrackGradient = () => {
+    const percent = tempPercent;
+    const bgUnfilled = isDark ? "#261647" : "#e9d5ff";
+
+    if (temperature <= 0.35) {
+      return `linear-gradient(to right, #0284c7 0%, #38bdf8 ${percent}%, ${bgUnfilled} ${percent}%, ${bgUnfilled} 100%)`;
+    } else if (temperature <= 0.75) {
+      return `linear-gradient(to right, #0284c7 0%, #a855f7 ${percent}%, ${bgUnfilled} ${percent}%, ${bgUnfilled} 100%)`;
+    } else {
+      return `linear-gradient(to right, #0284c7 0%, #a855f7 50%, #f59e0b ${percent}%, ${bgUnfilled} ${percent}%, ${bgUnfilled} 100%)`;
+    }
   };
 
   const tempInfo = getTempLabel(temperature);
@@ -222,28 +303,37 @@ export function AiResponseSettingsModal({
               width: 22px;
               height: 22px;
               border-radius: 50%;
-              background: #9333ea;
+              background: var(--thumb-color, #9333ea);
               border: 3px solid #ffffff;
               cursor: pointer;
-              box-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
-              transition: transform 0.15s ease, background 0.15s ease;
+              box-shadow: var(--thumb-glow, 0 0 12px rgba(168, 85, 247, 0.6));
+              transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
             }
             .astra-range-slider::-webkit-slider-thumb:hover {
               transform: scale(1.15);
-              background: #a855f7;
+            }
+            .astra-range-slider.sliding::-webkit-slider-thumb,
+            .astra-range-slider:active::-webkit-slider-thumb {
+              transform: scale(1.25);
+              box-shadow: var(--thumb-glow-sliding, 0 0 24px rgba(168, 85, 247, 0.95));
             }
             .astra-range-slider::-moz-range-thumb {
               width: 20px;
               height: 20px;
               border-radius: 50%;
-              background: #9333ea;
+              background: var(--thumb-color, #9333ea);
               border: 3px solid #ffffff;
               cursor: pointer;
-              box-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
-              transition: transform 0.15s ease;
+              box-shadow: var(--thumb-glow, 0 0 12px rgba(168, 85, 247, 0.6));
+              transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
             }
             .astra-range-slider::-moz-range-thumb:hover {
               transform: scale(1.15);
+            }
+            .astra-range-slider.sliding::-moz-range-thumb,
+            .astra-range-slider:active::-moz-range-thumb {
+              transform: scale(1.25);
+              box-shadow: var(--thumb-glow-sliding, 0 0 24px rgba(168, 85, 247, 0.95));
             }
 
             /* Custom Toggle Switch from Uiverse.io reference */
@@ -388,61 +478,131 @@ export function AiResponseSettingsModal({
 
               {/* Numerical Badge & Descriptor */}
               <div
-                className={`flex items-center gap-2 px-2.5 py-1 rounded-xl border text-xs font-mono font-semibold ${
-                  isDark
-                    ? "bg-purple-950/50 border-purple-500/30"
-                    : "bg-purple-50 border-purple-200"
-                }`}
+                className={`flex items-center gap-2 px-2.5 py-1 rounded-xl border text-xs font-mono font-semibold transition-all duration-300 ${
+                  tempInfo.badgeBg
+                } ${tempInfo.badgeBorder} ${tempInfo.badgeText}`}
+                style={{
+                  boxShadow: tempInfo.badgeGlow,
+                }}
               >
                 <span className={tempInfo.color}>{tempInfo.label}</span>
                 <span className="opacity-40">|</span>
-                <span className="text-white dark:text-white text-purple-950 font-bold">{temperature.toFixed(2)}</span>
+                <span className="font-bold">{temperature.toFixed(2)}</span>
               </div>
             </div>
 
             {/* Slider with dynamic track gradient (from Range_slider) */}
-            <div className="pt-2 pb-1">
+            <div className="pt-2 pb-1 relative">
               <input
                 type="range"
                 min="0.0"
                 max="1.0"
                 step="0.05"
                 value={temperature}
-                onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                className="astra-range-slider"
-                style={{
-                  background: `linear-gradient(to right, #9333ea 0%, #c084fc ${tempPercent}%, ${
-                    isDark ? "#261647" : "#e9d5ff"
-                  } ${tempPercent}%, ${isDark ? "#261647" : "#e9d5ff"} 100%)`,
+                onChange={(e) => handleSliderChange(parseFloat(e.target.value))}
+                onPointerDown={() => setIsSliding(true)}
+                onPointerUp={() => {
+                  if (slidingTimeoutRef.current) clearTimeout(slidingTimeoutRef.current);
+                  slidingTimeoutRef.current = setTimeout(() => setIsSliding(false), 500);
                 }}
+                className={`astra-range-slider ${isSliding ? "sliding" : ""}`}
+                style={{
+                  background: getTrackGradient(),
+                  "--thumb-color": tempInfo.hex,
+                  "--thumb-glow": `0 0 14px rgba(${tempInfo.rgb}, 0.65)`,
+                  "--thumb-glow-sliding": `0 0 26px rgba(${tempInfo.rgb}, 0.95), 0 0 10px #ffffff`,
+                } as React.CSSProperties}
               />
             </div>
 
             {/* 3 Quick Presets (Precise, Balanced, Creative) */}
             <div className="grid grid-cols-3 gap-2 pt-1">
               {[
-                { label: "Precise", val: 0.2, desc: "0.2 • Code & Math" },
-                { label: "Balanced", val: 0.7, desc: "0.7 • General Tasks" },
-                { label: "Creative", val: 1.0, desc: "1.0 • Brainstorming" },
+                {
+                  label: "Precise",
+                  val: 0.2,
+                  desc: "0.2 • Code & Math",
+                  color: "#38bdf8",
+                  rgb: "56, 189, 248",
+                  isActive: temperature <= 0.35,
+                  activeDark: "bg-gradient-to-br from-sky-500/25 via-sky-600/10 to-transparent border-sky-400 text-sky-100 ring-1 ring-sky-400/80",
+                  activeLight: "bg-sky-50 border-sky-400 text-sky-950 ring-1 ring-sky-300",
+                  inactiveDark: "bg-sky-950/15 border-sky-500/20 hover:bg-sky-900/25 text-sky-300/70 hover:text-sky-200 hover:border-sky-400/40",
+                  inactiveLight: "bg-sky-50/40 border-sky-200 hover:bg-sky-100/60 text-sky-800/70 hover:text-sky-950",
+                },
+                {
+                  label: "Balanced",
+                  val: 0.7,
+                  desc: "0.7 • General Tasks",
+                  color: "#c084fc",
+                  rgb: "168, 85, 247",
+                  isActive: temperature > 0.35 && temperature <= 0.75,
+                  activeDark: "bg-gradient-to-br from-purple-500/25 via-purple-600/10 to-transparent border-purple-400 text-purple-100 ring-1 ring-purple-400/80",
+                  activeLight: "bg-purple-50 border-purple-400 text-purple-950 ring-1 ring-purple-300",
+                  inactiveDark: "bg-purple-950/15 border-purple-500/20 hover:bg-purple-900/25 text-purple-300/70 hover:text-purple-200 hover:border-purple-400/40",
+                  inactiveLight: "bg-purple-50/40 border-purple-200 hover:bg-purple-100/60 text-purple-800/70 hover:text-purple-950",
+                },
+                {
+                  label: "Creative",
+                  val: 1.0,
+                  desc: "1.0 • Brainstorming",
+                  color: "#f59e0b",
+                  rgb: "245, 158, 11",
+                  isActive: temperature > 0.75,
+                  activeDark: "bg-gradient-to-br from-amber-500/25 via-amber-600/10 to-transparent border-amber-400 text-amber-100 ring-1 ring-amber-400/80",
+                  activeLight: "bg-amber-50 border-amber-400 text-amber-950 ring-1 ring-amber-300",
+                  inactiveDark: "bg-amber-950/15 border-amber-500/20 hover:bg-amber-900/25 text-amber-300/70 hover:text-amber-200 hover:border-amber-400/40",
+                  inactiveLight: "bg-amber-50/40 border-amber-200 hover:bg-amber-100/60 text-amber-800/70 hover:text-amber-950",
+                },
               ].map((p) => {
-                const isActive = Math.abs(temperature - p.val) < 0.04;
+                const glowStyle = p.isActive
+                  ? isSliding
+                    ? `0 0 24px rgba(${p.rgb}, 0.65), 0 0 8px rgba(${p.rgb}, 0.4), inset 0 0 14px rgba(${p.rgb}, 0.25)`
+                    : `0 0 14px rgba(${p.rgb}, 0.35)`
+                  : undefined;
+
                 return (
                   <button
                     key={p.label}
                     type="button"
-                    onClick={() => setTemperature(p.val)}
-                    className={`px-2.5 py-1.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      isActive
+                    onClick={() => handleSliderChange(p.val)}
+                    className={`relative px-2.5 py-1.5 rounded-xl border text-left cursor-pointer select-none overflow-hidden transition-all duration-200 ${
+                      p.isActive
                         ? isDark
-                          ? "bg-purple-600/30 border-purple-400 text-purple-200 shadow-[0_0_12px_rgba(168,85,247,0.3)] ring-1 ring-purple-400"
-                          : "bg-purple-100 border-purple-400 text-purple-950 ring-1 ring-purple-300"
+                          ? p.activeDark
+                          : p.activeLight
                         : isDark
-                        ? "bg-purple-950/20 border-purple-500/20 hover:bg-purple-900/30 text-purple-300 opacity-70 hover:opacity-100"
-                        : "bg-purple-50/50 border-purple-200 hover:bg-purple-100/60 text-purple-800 opacity-70 hover:opacity-100"
-                    }`}
+                        ? p.inactiveDark
+                        : p.inactiveLight
+                    } ${p.isActive && isSliding ? "scale-[1.03]" : ""}`}
+                    style={{
+                      boxShadow: glowStyle,
+                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    }}
                   >
-                    <div className="text-xs font-semibold leading-tight">{p.label}</div>
-                    <div className="text-[10px] opacity-60 leading-tight mt-0.5">{p.desc}</div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-semibold leading-tight flex items-center gap-1.5">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                            p.isActive ? "scale-125" : "opacity-40"
+                          }`}
+                          style={{
+                            backgroundColor: p.color,
+                            boxShadow: p.isActive
+                              ? `0 0 ${isSliding ? "10px" : "6px"} ${p.color}`
+                              : "none",
+                          }}
+                        />
+                        <span>{p.label}</span>
+                      </div>
+                    </div>
+                    <div
+                      className={`text-[10px] leading-tight mt-1 transition-opacity ${
+                        p.isActive ? "opacity-90 font-medium" : "opacity-55"
+                      }`}
+                    >
+                      {p.desc}
+                    </div>
                   </button>
                 );
               })}
@@ -472,40 +632,120 @@ export function AiResponseSettingsModal({
                   name: "Concise",
                   desc: "Direct bullet points",
                   icon: (
-                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h10M4 18h7" />
-                    </svg>
+                    <ListIcon
+                      ref={conciseIconRef}
+                      size={15}
+                      duration={1}
+                      color="#f59e0b"
+                    />
                   ),
+                  onHover: () => conciseIconRef.current?.startAnimation(),
+                  onLeave: () => conciseIconRef.current?.stopAnimation(),
+                  theme: {
+                    btnActive: isDark
+                      ? "bg-gradient-to-br from-amber-500/20 via-amber-600/10 to-transparent border-amber-400/80 text-white shadow-[0_0_20px_rgba(245,158,11,0.22)] ring-1 ring-amber-400/60"
+                      : "bg-amber-50 border-amber-400 text-amber-950 shadow-sm ring-1 ring-amber-300",
+                    btnInactive: isDark
+                      ? "border-transparent text-purple-200/70 hover:bg-white/5 hover:border-amber-500/30 hover:text-white"
+                      : "border-transparent text-purple-800/70 hover:bg-amber-50/60 hover:text-amber-950",
+                    iconBoxActive: isDark
+                      ? "bg-amber-500/25 border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.4)]"
+                      : "bg-amber-100 border-amber-400 text-amber-800",
+                    iconBoxInactive: isDark
+                      ? "bg-amber-500/10 border-amber-500/30 text-amber-400 group-hover:bg-amber-500/20 group-hover:border-amber-400/50"
+                      : "bg-amber-50 border-amber-300 text-amber-700",
+                    descActive: isDark ? "text-amber-200/85 font-medium" : "text-amber-800/85 font-medium",
+                  },
                 },
                 {
                   id: "professional" as ResponseTone,
                   name: "Professional",
                   desc: "Polished corporate",
                   icon: (
-                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
+                    <SquareUserIcon
+                      ref={professionalIconRef}
+                      size={15}
+                      duration={1}
+                      color="#38bdf8"
+                    />
                   ),
+                  onHover: () => professionalIconRef.current?.startAnimation(),
+                  onLeave: () => professionalIconRef.current?.stopAnimation(),
+                  theme: {
+                    btnActive: isDark
+                      ? "bg-gradient-to-br from-sky-500/20 via-sky-600/10 to-transparent border-sky-400/80 text-white shadow-[0_0_20px_rgba(56,189,248,0.22)] ring-1 ring-sky-400/60"
+                      : "bg-sky-50 border-sky-400 text-sky-950 shadow-sm ring-1 ring-sky-300",
+                    btnInactive: isDark
+                      ? "border-transparent text-purple-200/70 hover:bg-white/5 hover:border-sky-500/30 hover:text-white"
+                      : "border-transparent text-purple-800/70 hover:bg-sky-50/60 hover:text-sky-950",
+                    iconBoxActive: isDark
+                      ? "bg-sky-500/25 border-sky-400 text-sky-300 shadow-[0_0_10px_rgba(56,189,248,0.4)]"
+                      : "bg-sky-100 border-sky-400 text-sky-800",
+                    iconBoxInactive: isDark
+                      ? "bg-sky-500/10 border-sky-500/30 text-sky-400 group-hover:bg-sky-500/20 group-hover:border-sky-400/50"
+                      : "bg-sky-50 border-sky-300 text-sky-700",
+                    descActive: isDark ? "text-sky-200/85 font-medium" : "text-sky-800/85 font-medium",
+                  },
                 },
                 {
                   id: "friendly" as ResponseTone,
                   name: "Friendly",
                   desc: "Warm & supportive",
                   icon: (
-                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <BotIcon
+                      ref={friendlyIconRef}
+                      size={15}
+                      duration={1}
+                      color="#ad4189"
+                    />
                   ),
+                  onHover: () => friendlyIconRef.current?.startAnimation(),
+                  onLeave: () => friendlyIconRef.current?.stopAnimation(),
+                  theme: {
+                    btnActive: isDark
+                      ? "bg-gradient-to-br from-[#ad4189]/25 via-pink-600/15 to-transparent border-[#ad4189]/80 text-white shadow-[0_0_20px_rgba(173,65,137,0.25)] ring-1 ring-[#ad4189]/60"
+                      : "bg-pink-50 border-[#ad4189] text-pink-950 shadow-sm ring-1 ring-pink-300",
+                    btnInactive: isDark
+                      ? "border-transparent text-purple-200/70 hover:bg-white/5 hover:border-[#ad4189]/40 hover:text-white"
+                      : "border-transparent text-purple-800/70 hover:bg-pink-50/60 hover:text-pink-950",
+                    iconBoxActive: isDark
+                      ? "bg-[#ad4189]/25 border-[#ad4189] text-pink-300 shadow-[0_0_10px_rgba(173,65,137,0.4)]"
+                      : "bg-pink-100 border-[#ad4189] text-[#ad4189]",
+                    iconBoxInactive: isDark
+                      ? "bg-[#ad4189]/15 border-[#ad4189]/30 text-pink-400 group-hover:bg-[#ad4189]/25 group-hover:border-[#ad4189]/50"
+                      : "bg-pink-50 border-pink-300 text-[#ad4189]",
+                    descActive: isDark ? "text-pink-200/85 font-medium" : "text-pink-800/85 font-medium",
+                  },
                 },
                 {
                   id: "developer" as ResponseTone,
                   name: "Senior Dev",
                   desc: "Code-first architect",
                   icon: (
-                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                    </svg>
+                    <CodeXmlIcon
+                      ref={developerIconRef}
+                      size={15}
+                      duration={1}
+                      color="#00d3f2"
+                    />
                   ),
+                  onHover: () => developerIconRef.current?.startAnimation(),
+                  onLeave: () => developerIconRef.current?.stopAnimation(),
+                  theme: {
+                    btnActive: isDark
+                      ? "bg-gradient-to-br from-[#00d3f2]/20 via-teal-600/10 to-transparent border-[#00d3f2]/80 text-white shadow-[0_0_20px_rgba(0,211,242,0.25)] ring-1 ring-[#00d3f2]/60"
+                      : "bg-cyan-50 border-cyan-400 text-cyan-950 shadow-sm ring-1 ring-cyan-300",
+                    btnInactive: isDark
+                      ? "border-transparent text-purple-200/70 hover:bg-white/5 hover:border-[#00d3f2]/30 hover:text-white"
+                      : "border-transparent text-purple-800/70 hover:bg-cyan-50/60 hover:text-cyan-950",
+                    iconBoxActive: isDark
+                      ? "bg-[#00d3f2]/25 border-[#00d3f2] text-cyan-300 shadow-[0_0_10px_rgba(0,211,242,0.4)]"
+                      : "bg-cyan-100 border-cyan-400 text-cyan-800",
+                    iconBoxInactive: isDark
+                      ? "bg-[#00d3f2]/10 border-[#00d3f2]/30 text-cyan-400 group-hover:bg-[#00d3f2]/20 group-hover:border-[#00d3f2]/50"
+                      : "bg-cyan-50 border-cyan-300 text-cyan-700",
+                    descActive: isDark ? "text-cyan-200/85 font-medium" : "text-cyan-800/85 font-medium",
+                  },
                 },
               ].map((item) => {
                 const isSelected = tone === item.id;
@@ -513,24 +753,33 @@ export function AiResponseSettingsModal({
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setTone(item.id)}
-                    className={`flex flex-col items-center justify-center p-2 rounded-xl text-center transition-all cursor-pointer select-none border ${
-                      isSelected
-                        ? isDark
-                          ? "bg-gradient-to-br from-purple-600/40 to-indigo-600/40 border-purple-400 text-white shadow-md shadow-purple-950/40 ring-1 ring-purple-400/50"
-                          : "bg-white border-purple-300 text-purple-950 shadow-sm ring-1 ring-purple-200"
-                        : isDark
-                        ? "border-transparent text-purple-300 hover:bg-white/5 opacity-70 hover:opacity-100"
-                        : "border-transparent text-purple-800 hover:bg-purple-100/60 opacity-70 hover:opacity-100"
+                    onClick={() => {
+                      setTone(item.id);
+                      item.onHover?.();
+                    }}
+                    onMouseEnter={() => item.onHover?.()}
+                    onMouseLeave={() => item.onLeave?.()}
+                    className={`group flex flex-col items-center justify-center p-2 rounded-xl text-center transition-all duration-200 cursor-pointer select-none border ${
+                      isSelected ? item.theme.btnActive : item.theme.btnInactive
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className={isSelected ? "text-purple-300 dark:text-purple-300" : "opacity-60"}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border transition-all duration-200 group-hover:scale-105 ${
+                          isSelected ? item.theme.iconBoxActive : item.theme.iconBoxInactive
+                        }`}
+                      >
                         {item.icon}
-                      </span>
-                      <span className="text-xs font-semibold">{item.name}</span>
+                      </div>
+                      <span className="text-xs font-semibold leading-tight">{item.name}</span>
                     </div>
-                    <span className="text-[10px] opacity-60 leading-tight">{item.desc}</span>
+                    <span
+                      className={`text-[10px] leading-tight transition-colors ${
+                        isSelected ? item.theme.descActive : "opacity-60"
+                      }`}
+                    >
+                      {item.desc}
+                    </span>
                   </button>
                 );
               })}

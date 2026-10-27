@@ -9,7 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@animateicons/react": "^0.12.0",
+    "@animateicons/react": "^0.13.0",
     "next": "^16.4.3",
     "openai": "^7.33.0",
     "react": "19.3.0",

@@ -273,7 +273,9 @@ export function ApiKeysModal({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-orange-500" />
+                <span className="shrink-0 flex items-center justify-center cursor-pointer transition-transform hover:scale-110" title="Groq API Key">
+                  <KeyRoundIcon size={15} duration={1} color="#ff6900" />
+                </span>
                 <label className="text-xs font-semibold">Groq API Key</label>
                 {/* Tooltip trigger */}
                 <div
@@ -407,7 +409,9 @@ export function ApiKeysModal({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                <span className="shrink-0 flex items-center justify-center cursor-pointer transition-transform hover:scale-110" title="OpenRouter API Key">
+                  <KeyRoundIcon size={15} duration={1} color="#615fff" />
+                </span>
                 <label className="text-xs font-semibold">OpenRouter API Key</label>
                 {/* Tooltip trigger */}
                 <div
@@ -541,7 +545,9 @@ export function ApiKeysModal({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="shrink-0 flex items-center justify-center cursor-pointer transition-transform hover:scale-110" title="Custom Agent API Key">
+                  <KeyRoundIcon size={15} duration={1} color="#00bc7d" />
+                </span>
                 <label className="text-xs font-semibold">Custom Agent API Key</label>
                 {/* Tooltip trigger */}
                 <div

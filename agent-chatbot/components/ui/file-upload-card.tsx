@@ -358,29 +358,6 @@ export function FileUploadCard({
           </div>
         </div>
       )}
-
-      {/* 4. Footer Action */}
-      <div
-        className={`px-4 py-3 border-t flex items-center justify-between text-xs ${
-          isDark ? "border-purple-500/20 bg-purple-950/20" : "border-purple-100 bg-purple-50/30"
-        }`}
-      >
-        <span className="text-[11px] opacity-70">
-          {files.length > 0 ? `${files.length} file(s) attached` : ""}
-        </span>
-
-        <button
-          type="button"
-          onClick={onClose}
-          className={`px-3 py-1.5 rounded-xl font-medium text-xs transition-all cursor-pointer ${
-            isDark
-              ? "bg-purple-600/30 hover:bg-purple-600/50 text-white border border-purple-500/40"
-              : "bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300"
-          }`}
-        >
-          {files.length > 0 ? "Done Attaching" : "Close"}
-        </button>
-      </div>
     </div>,
     document.body
   );

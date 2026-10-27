@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { runAgent } from "@/lib/agent";
-import { routeUserMessage } from "@/lib/router";
+import { routeUserMessage, agents } from "@/lib/router";
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,8 +8,10 @@ export async function POST(req: NextRequest) {
       messages,
       preferredProvider,
       preferredModel,
+      focusAgent,
       customGroqKey,
       customOpenRouterKey,
+      customAgentKey,
       temperature,
       tone,
       customInstructions,
@@ -27,8 +29,10 @@ export async function POST(req: NextRequest) {
     // 1. Get latest user prompt
     const lastUserMessage = [...windowedMessages].reverse().find((m) => m.role === "user")?.content || "";
 
-    // 2. 🚦 Supervisor Router selects the best specialist agent
-    const selectedAgent = await routeUserMessage(lastUserMessage);
+    // 2. 🚦 Supervisor Router selects the best specialist agent (or enforced by user focusAgent)
+    const selectedAgent = focusAgent && agents[focusAgent]
+      ? agents[focusAgent]
+      : await routeUserMessage(lastUserMessage);
     console.log(`✦ Supervisor dispatched task to: [${selectedAgent.title}] (${selectedAgent.name})`);
 
     // 3. Augment systemPrompt with user response style and custom instructions
@@ -59,7 +63,8 @@ export async function POST(req: NextRequest) {
       preferredModel,
       customGroqKey,
       customOpenRouterKey,
-      typeof temperature === "number" ? temperature : 0.7
+      typeof temperature === "number" ? temperature : 0.7,
+      customAgentKey
     );
 
     // 2. Stream the agent's final answer smoothly to the UI
@@ -83,8 +88,8 @@ export async function POST(req: NextRequest) {
         "Content-Type": "text/plain; charset=utf-8",
         "X-Provider": provider,
         "X-Model": model,
-        "X-Agent": selectedAgent.name,
-        "X-Agent-Title": selectedAgent.title,
+        "X-Agent": preferredProvider === "custom" ? "Custom Autonomous Agent" : selectedAgent.name,
+        "X-Agent-Title": preferredProvider === "custom" ? "Custom Autonomous Agent" : selectedAgent.title,
       },
     });
   } catch (err: unknown) {

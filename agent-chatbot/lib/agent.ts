@@ -17,7 +17,8 @@ export async function runAgent(
   preferredModel?: string,
   customGroqKey?: string,
   customOpenRouterKey?: string,
-  temperature?: number
+  temperature?: number,
+  customAgentKey?: string
 ): Promise<AgentResult> {
   // 1. Prepare conversation array with system prompt
   const convo: OpenAI.ChatCompletionMessageParam[] = [
@@ -40,7 +41,8 @@ export async function runAgent(
       preferredProvider,
       preferredModel,
       customGroqKey,
-      customOpenRouterKey
+      customOpenRouterKey,
+      customAgentKey
     );
     const message = res.rawMessage;
 

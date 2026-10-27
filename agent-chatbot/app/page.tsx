@@ -2,7 +2,17 @@
 
 import { useState, useRef, useEffect } from "react";
 import FluidOrb from "@/components/ui/fluid-orb";
-import { BotIcon } from "@animateicons/react/lucide";
+import {
+  BotIcon,
+  UsersIcon,
+  type UsersIconHandle,
+  ZapIcon,
+  type ZapIconHandle,
+  WrenchIcon,
+  type WrenchIconHandle,
+  ArrowUpIcon,
+  type ArrowUpIconHandle,
+} from "@animateicons/react/lucide";
 import { ModelPicker } from "@/components/ui/model-picker";
 import { FileUploadCard, UploadedFile } from "@/components/ui/file-upload-card";
 import { AccountSettingsDropdown } from "@/components/ui/account-settings-dropdown";
@@ -31,14 +41,6 @@ function AtSignIcon() {
   );
 }
 
-function ArrowUpIcon() {
-  return (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M8 12.6667V3.33333M12.6667 8L8 3.33333L3.33333 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function PaperclipIcon() {
   return (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,32 +54,7 @@ function PaperclipIcon() {
   );
 }
 
-function SquadIcon() {
-  return (
-    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
 
-function CascadeIcon() {
-  return (
-    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    </svg>
-  );
-}
-
-function ToolsIcon() {
-  return (
-    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-    </svg>
-  );
-}
 
 function AstraLogo({ className = "w-6 h-6", fill = "#ea580c" }: { className?: string; fill?: string }) {
   return (
@@ -102,6 +79,41 @@ function AstraLogo({ className = "w-6 h-6", fill = "#ea580c" }: { className?: st
   );
 }
 
+const FOCUS_AGENTS_CONFIG = {
+  researcher: {
+    label: "Search the web",
+    title: "Research Analyst Agent",
+    icon: (
+      <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="10.5" cy="10.5" r="6.5" strokeWidth="2" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 16l4 4" />
+      </svg>
+    ),
+    badgeDark: "bg-blue-500/25 text-blue-200 border-blue-400/40 shadow-[0_0_12px_rgba(59,130,246,0.3)]",
+    badgeLight: "bg-blue-100 text-blue-900 border-blue-300 shadow-sm",
+    textColorDark: "text-blue-400",
+    textColorLight: "text-blue-700",
+  },
+  coder: {
+    label: "Write code",
+    title: "Software Engineer Agent",
+    icon: <span className="text-purple-400 text-xs">💻</span>,
+    badgeDark: "bg-purple-500/25 text-purple-200 border-purple-400/40 shadow-[0_0_12px_rgba(168,85,247,0.3)]",
+    badgeLight: "bg-purple-100 text-purple-900 border-purple-300 shadow-sm",
+    textColorDark: "text-purple-400",
+    textColorLight: "text-purple-700",
+  },
+  summarizer: {
+    label: "Summarize",
+    title: "Executive Summarizer Agent",
+    icon: <span className="text-orange-400 text-xs">📄</span>,
+    badgeDark: "bg-amber-500/25 text-amber-200 border-amber-400/40 shadow-[0_0_12px_rgba(245,158,11,0.3)]",
+    badgeLight: "bg-amber-100 text-amber-900 border-amber-300 shadow-sm",
+    textColorDark: "text-amber-400",
+    textColorLight: "text-amber-700",
+  },
+} as const;
+
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -111,8 +123,10 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [greeting, setGreeting] = useState("Good Afternoon");
   const [searchFilter, setSearchFilter] = useState("");
-  const [selectedProvider, setSelectedProvider] = useState<"groq" | "openrouter" | "auto">("groq");
+  const [selectedProvider, setSelectedProvider] = useState<"groq" | "openrouter" | "auto" | "custom">("groq");
   const [selectedModel, setSelectedModel] = useState<string>("openai/gpt-oss-20b");
+  const [activeFocusAgent, setActiveFocusAgent] = useState<"researcher" | "coder" | "summarizer" | null>(null);
+  const [hasCustomAgentKey, setHasCustomAgentKey] = useState(false);
   const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
   const [isApiKeysModalOpen, setIsApiKeysModalOpen] = useState(false);
   const [isResponseSettingsOpen, setIsResponseSettingsOpen] = useState(false);
@@ -124,6 +138,11 @@ export default function Home() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const botIconRef = useRef<{ startAnimation: () => void; stopAnimation: () => void } | null>(null);
+  const squadIconRef = useRef<UsersIconHandle>(null);
+  const cascadeIconRef = useRef<ZapIconHandle>(null);
+  const toolsIconRef = useRef<WrenchIconHandle>(null);
+  const heroSendIconRef = useRef<ArrowUpIconHandle>(null);
+  const footerSendIconRef = useRef<ArrowUpIconHandle>(null);
 
   // Handle adding new files (pure local state, ZERO token consumption)
   function handleFilesChange(newFiles: File[]) {
@@ -183,6 +202,10 @@ export default function Home() {
     if (savedTheme === "light" || savedTheme === "dark") {
       setTheme(savedTheme);
     }
+
+    // Hydrate custom agent key status
+    const storedCustomAgentKey = localStorage.getItem("astra_custom_agent_key");
+    setHasCustomAgentKey(Boolean(storedCustomAgentKey && storedCustomAgentKey.trim()));
 
     // Restore chat history
     const savedHistory = localStorage.getItem("astra_chat_history");
@@ -285,6 +308,7 @@ export default function Home() {
 
       const customGroqKey = typeof window !== "undefined" ? localStorage.getItem("astra_custom_groq_key") || undefined : undefined;
       const customOpenRouterKey = typeof window !== "undefined" ? localStorage.getItem("astra_custom_openrouter_key") || undefined : undefined;
+      const customAgentKey = typeof window !== "undefined" ? localStorage.getItem("astra_custom_agent_key") || undefined : undefined;
       const temperature = typeof window !== "undefined" && localStorage.getItem("astra_ai_temperature") ? parseFloat(localStorage.getItem("astra_ai_temperature")!) : 0.7;
       const tone = typeof window !== "undefined" ? localStorage.getItem("astra_ai_tone") || "friendly" : "friendly";
       const customInstructions = typeof window !== "undefined" ? localStorage.getItem("astra_ai_custom_instructions") || undefined : undefined;
@@ -297,8 +321,10 @@ export default function Home() {
           messages: apiMessages,
           preferredProvider: selectedProvider,
           preferredModel: selectedModel,
+          focusAgent: activeFocusAgent || undefined,
           customGroqKey,
           customOpenRouterKey,
+          customAgentKey,
           temperature,
           tone,
           customInstructions,
@@ -372,7 +398,7 @@ export default function Home() {
 
   // 3 Feature Cards styling (glassmorphism from glass.css)
   const featureCardClass =
-    "p-4 rounded-2xl transition-all duration-300 text-left select-none cursor-default glass-card-theme";
+    "p-3 md:p-3.5 rounded-2xl transition-all duration-300 text-left select-none cursor-default glass-card-theme";
 
   return (
     <div
@@ -575,50 +601,90 @@ export default function Home() {
         </header>
 
         {/* 3. Messages Feed OR Axora-Style Centered Hero Screen */}
-        <div className="flex-1 overflow-y-auto px-4 md:px-6">
+        <div className="flex-1 overflow-y-auto px-4 md:px-6 no-scrollbar flex flex-col">
           {messages.length === 0 ? (
-            /* STATE A: Axora-Style Layout (Orb + Dynamic Greeting at top, Floating Search Bar & 3 Feature Cards at Bottom) */
-            <div className="flex flex-col justify-between min-h-[calc(100vh-80px)] max-w-4xl w-full mx-auto px-2 py-6">
+            /* STATE A: Centered Hero Screen (Orb + Dynamic Greeting + Floating Search Bar + 3 Feature Cards) */
+            <div className="flex flex-col items-center justify-center my-auto w-full max-w-3xl mx-auto px-2 py-4 md:py-6">
               {/* Upper Section: Luminous 3D Orb + Dynamic Greeting */}
-              <div className="flex flex-col items-center justify-center pt-8 md:pt-12 pb-4 text-center my-auto select-none">
-                {/* Fluid Dynamic WebGL Orb */}
-                <div className="relative mb-3 flex items-center justify-center select-none">
+              <div className="flex flex-col items-center justify-center text-center select-none mb-5">
+                {/* Fluid Dynamic WebGL Orb (Compact, sleek & proportionate) */}
+                <div className="relative mb-2.5 flex items-center justify-center select-none">
                   {/* Subtle soft cosmic ambient glow behind fluid orb */}
-                  <div className="absolute w-52 h-52 rounded-full blur-3xl pointer-events-none opacity-35 transition-all duration-700 orb-ambient-glow" />
+                  <div className="absolute w-36 h-36 rounded-full blur-2xl pointer-events-none opacity-40 transition-all duration-700 orb-ambient-glow" />
 
                   <FluidOrb
-                    size={200}
+                    size={140}
                     color={isDark ? "#9f4ac9" : "#845fe2"}
-                    className="shadow-2xl shadow-purple-950/30"
+                    className="shadow-xl shadow-purple-950/25"
                   />
                 </div>
 
-                <h1 suppressHydrationWarning className="text-3xl md:text-5xl font-medium tracking-tight mb-2">
+                <h1 suppressHydrationWarning className="text-2xl md:text-3xl font-semibold tracking-tight mb-1">
                   {greeting}, Aniket.
                 </h1>
-                <p className="text-xl md:text-2xl font-light opacity-80">
+                <p className="text-sm md:text-base font-normal opacity-70">
                   How can I help you today?
                 </p>
               </div>
 
               {/* Lower Section: Pure Floating Search Bar + 3 Feature Cards Directly Beneath It */}
-              <div className="w-full mt-auto pt-4 pb-2">
+              <div className="w-full pb-4 md:pb-8">
                 {/* 1. Pure Floating Glassmorphic Search Bar (No background rectangle) */}
                 <div
-                  className={`w-full rounded-[24px] p-3.5 md:p-4 transition-all mb-4 ${promptCardBg}`}
+                  className={`w-full rounded-[22px] p-3 md:p-3.5 transition-all mb-3 ${promptCardBg}`}
                 >
-                  {/* Top Action Row (Static visual badges, NO click triggers) */}
-                  <div className="flex items-center gap-2 mb-2 select-none">
-                    <div
-                      className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-xs font-medium cursor-default ${chipGlass}`}
-                    >
-                      <AtSignIcon />
-                      <span className="text-[11px]">Focus Agent</span>
-                    </div>
+                  {/* Top Action Row (Dynamic Focus Agent Indicator) */}
+                  <div className="flex items-center gap-2 mb-1.5 select-none transition-all duration-200">
+                    {activeFocusAgent ? (
+                      <>
+                        <div
+                          className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-xs font-semibold cursor-pointer transition-all border ${
+                            isDark
+                              ? FOCUS_AGENTS_CONFIG[activeFocusAgent].badgeDark
+                              : FOCUS_AGENTS_CONFIG[activeFocusAgent].badgeLight
+                          }`}
+                          onClick={() => setActiveFocusAgent(null)}
+                          title="Click to remove preset agent"
+                        >
+                          {FOCUS_AGENTS_CONFIG[activeFocusAgent].icon}
+                          <span className="text-[11px] font-semibold">{FOCUS_AGENTS_CONFIG[activeFocusAgent].label}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveFocusAgent(null);
+                            }}
+                            className="ml-1 opacity-60 hover:opacity-100 hover:scale-125 transition-all text-[11px] leading-none"
+                            title="Remove focus agent"
+                          >
+                            ✕
+                          </button>
+                        </div>
 
-                    <span className="text-xs font-medium cursor-default transition-colors supervisor-text">
-                      Astra Multi-Agent Supervisor
-                    </span>
+                        <span
+                          className={`text-[11px] font-medium transition-colors ${
+                            isDark
+                              ? FOCUS_AGENTS_CONFIG[activeFocusAgent].textColorDark
+                              : FOCUS_AGENTS_CONFIG[activeFocusAgent].textColorLight
+                          }`}
+                        >
+                          {FOCUS_AGENTS_CONFIG[activeFocusAgent].title}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <div
+                          className={`inline-flex items-center gap-1.5 h-5 px-2 rounded-full text-xs font-medium cursor-default ${chipGlass}`}
+                        >
+                          <AtSignIcon />
+                          <span className="text-[10px]">Focus Agent</span>
+                        </div>
+
+                        <span className="text-[11px] font-medium cursor-default transition-colors supervisor-text">
+                          Astra Multi-Agent Supervisor
+                        </span>
+                      </>
+                    )}
                   </div>
 
                   {/* Textarea (FUNCTIONAL: User types here - high contrast & immediately visible on theme switch) */}
@@ -629,7 +695,7 @@ export default function Home() {
                     onKeyDown={handleKeyDown}
                     rows={2}
                     placeholder="Message Astra AI or ask anything..."
-                    className="w-full bg-transparent resize-none outline-none text-sm md:text-base leading-relaxed py-1 px-1 transition-colors duration-200 prompt-textarea"
+                    className="w-full bg-transparent resize-none outline-none text-xs md:text-sm leading-relaxed py-1 px-1 transition-colors duration-200 prompt-textarea"
                   />
 
                   {/* Bottom Controls Row: Visual Chips & ONLY Send Arrow is Functional */}
@@ -672,36 +738,82 @@ export default function Home() {
                           setSelectedModel(modelId);
                         }}
                         isDark={isDark}
+                        hasCustomAgentKey={hasCustomAgentKey}
                       />
 
-                      <div
-                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium select-none cursor-default ${chipGlass}`}
+                      {/* Interactive Preset Buttons: Selects agent without triggering prompt execution */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveFocusAgent((prev) => (prev === "researcher" ? null : "researcher"));
+                          textareaRef.current?.focus();
+                        }}
+                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 select-none ${
+                          activeFocusAgent === "researcher"
+                            ? isDark
+                              ? "bg-blue-500/25 text-blue-200 border border-blue-400/50 shadow-[0_0_12px_rgba(59,130,246,0.3)] ring-1 ring-blue-400/30 font-semibold"
+                              : "bg-blue-100 text-blue-900 border border-blue-300 shadow-sm font-semibold ring-1 ring-blue-400/40"
+                            : `${chipGlass} hover:border-blue-400/40 hover:bg-white/5`
+                        }`}
+                        title="Focus on Web Search & Real-Time Research"
                       >
                         <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <circle cx="10.5" cy="10.5" r="6.5" strokeWidth="2" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 16l4 4" />
                         </svg>
                         <span>Search the web</span>
-                      </div>
+                      </button>
 
-                      <div
-                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium ${chipGlass}`}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveFocusAgent((prev) => (prev === "coder" ? null : "coder"));
+                          textareaRef.current?.focus();
+                        }}
+                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 select-none ${
+                          activeFocusAgent === "coder"
+                            ? isDark
+                              ? "bg-purple-500/25 text-purple-200 border border-purple-400/50 shadow-[0_0_12px_rgba(168,85,247,0.3)] ring-1 ring-purple-400/30 font-semibold"
+                              : "bg-purple-100 text-purple-900 border border-purple-300 shadow-sm font-semibold ring-1 ring-purple-400/40"
+                            : `${chipGlass} hover:border-purple-400/40 hover:bg-white/5`
+                        }`}
+                        title="Focus on Software Engineering & Architecture"
                       >
                         <span className="text-purple-400">💻</span>
                         <span>Write code</span>
-                      </div>
+                      </button>
 
-                      <div
-                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium ${chipGlass}`}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveFocusAgent((prev) => (prev === "summarizer" ? null : "summarizer"));
+                          textareaRef.current?.focus();
+                        }}
+                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 select-none ${
+                          activeFocusAgent === "summarizer"
+                            ? isDark
+                              ? "bg-amber-500/25 text-amber-200 border border-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.3)] ring-1 ring-amber-400/30 font-semibold"
+                              : "bg-amber-100 text-amber-900 border border-amber-300 shadow-sm font-semibold ring-1 ring-amber-400/40"
+                            : `${chipGlass} hover:border-amber-400/40 hover:bg-white/5`
+                        }`}
+                        title="Focus on Document Synthesis & Executive Summaries"
                       >
                         <span className="text-orange-400">📄</span>
                         <span>Summarize</span>
-                      </div>
+                      </button>
                     </div>
 
                     {/* Submit Pill Button (FUNCTIONAL: Only clicking this sends the typed prompt) */}
                     <button
                       onClick={() => handleSubmit()}
+                      onMouseEnter={() => {
+                        if ((input.trim() || attachedFiles.length > 0) && !isLoading) {
+                          heroSendIconRef.current?.startAnimation();
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        heroSendIconRef.current?.stopAnimation();
+                      }}
                       disabled={(!input.trim() && attachedFiles.length === 0) || isLoading}
                       style={
                         (input.trim() || attachedFiles.length > 0) && !isLoading
@@ -717,54 +829,92 @@ export default function Home() {
                       }`}
                       title="Send prompt"
                     >
-                      <ArrowUpIcon />
+                      <ArrowUpIcon
+                        ref={heroSendIconRef}
+                        size={16}
+                        duration={0.8}
+                        color={
+                          (input.trim() || attachedFiles.length > 0) && !isLoading
+                            ? "#ffffff"
+                            : isDark
+                            ? "rgba(255, 255, 255, 0.3)"
+                            : "rgba(88, 28, 135, 0.4)"
+                        }
+                      />
                     </button>
                   </div>
                 </div>
 
                 {/* 2. Three Feature Cards (PURELY INFORMATIONAL, NO click triggers, ZERO token consumption) */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
                   {/* Card 1: Multi-Agent Squad */}
-                  <div className={featureCardClass}>
+                  <div
+                    onMouseEnter={() => squadIconRef.current?.startAnimation()}
+                    onMouseLeave={() => squadIconRef.current?.stopAnimation()}
+                    className={featureCardClass}
+                  >
                     <div className="flex items-center justify-between mb-1.5">
-                      <h3 className="font-semibold text-sm">
+                      <h3 className="font-semibold text-xs md:text-sm">
                         Multi-Agent Squad
                       </h3>
                       <div className="feature-icon-box feature-icon-purple" aria-hidden="true">
-                        <SquadIcon />
+                        <UsersIcon
+                          ref={squadIconRef}
+                          size={15}
+                          duration={1}
+                          color={isDark ? "#d8b4fe" : "#7c3aed"}
+                        />
                       </div>
                     </div>
-                    <p className="text-xs leading-relaxed card-description">
+                    <p className="text-[11px] leading-relaxed card-description">
                       5 specialized autonomous agents for coding, web research, document analysis, summarization, and natural conversation.
                     </p>
                   </div>
 
                   {/* Card 2: 3-Tier LLM Cascade */}
-                  <div className={featureCardClass}>
+                  <div
+                    onMouseEnter={() => cascadeIconRef.current?.startAnimation()}
+                    onMouseLeave={() => cascadeIconRef.current?.stopAnimation()}
+                    className={featureCardClass}
+                  >
                     <div className="flex items-center justify-between mb-1.5">
-                      <h3 className="font-semibold text-sm">
+                      <h3 className="font-semibold text-xs md:text-sm">
                         Fail-Safe Cascade
                       </h3>
                       <div className="feature-icon-box feature-icon-amber" aria-hidden="true">
-                        <CascadeIcon />
+                        <ZapIcon
+                          ref={cascadeIconRef}
+                          size={15}
+                          duration={1}
+                          color={isDark ? "#fde047" : "#d97706"}
+                        />
                       </div>
                     </div>
-                    <p className="text-xs leading-relaxed card-description">
+                    <p className="text-[11px] leading-relaxed card-description">
                       Uninterrupted intelligence with automated failover transitioning seamlessly across Groq ➔ OpenRouter ➔ Local Offline Ollama.
                     </p>
                   </div>
 
                   {/* Card 3: Autonomous Live Tools */}
-                  <div className={featureCardClass}>
+                  <div
+                    onMouseEnter={() => toolsIconRef.current?.startAnimation()}
+                    onMouseLeave={() => toolsIconRef.current?.stopAnimation()}
+                    className={featureCardClass}
+                  >
                     <div className="flex items-center justify-between mb-1.5">
-                      <h3 className="font-semibold text-sm">
+                      <h3 className="font-semibold text-xs md:text-sm">
                         Autonomous Tools
                       </h3>
                       <div className="feature-icon-box feature-icon-cyan" aria-hidden="true">
-                        <ToolsIcon />
+                        <WrenchIcon
+                          ref={toolsIconRef}
+                          size={15}
+                          duration={1}
+                          color={isDark ? "#67e8f9" : "#0891b2"}
+                        />
                       </div>
                     </div>
-                    <p className="text-xs leading-relaxed card-description">
+                    <p className="text-[11px] leading-relaxed card-description">
                       Autonomous tool-calling loop executing live web search with Tavily, real-time timezone clock, calculator, and dataset analysis.
                     </p>
                   </div>
@@ -825,6 +975,41 @@ export default function Home() {
         {messages.length > 0 && (
           <footer className="p-4 bg-transparent transition-colors">
             <div className="max-w-3xl mx-auto shadow-xl">
+              {activeFocusAgent && (
+                <div className="flex items-center gap-2 mb-1.5 px-1 animate-in fade-in-0 duration-150">
+                  <div
+                    className={`inline-flex items-center gap-1.5 h-5 px-2 rounded-full text-xs font-semibold cursor-pointer border ${
+                      isDark
+                        ? FOCUS_AGENTS_CONFIG[activeFocusAgent].badgeDark
+                        : FOCUS_AGENTS_CONFIG[activeFocusAgent].badgeLight
+                    }`}
+                    onClick={() => setActiveFocusAgent(null)}
+                    title="Click to remove focus agent"
+                  >
+                    {FOCUS_AGENTS_CONFIG[activeFocusAgent].icon}
+                    <span className="text-[10px]">{FOCUS_AGENTS_CONFIG[activeFocusAgent].label}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveFocusAgent(null);
+                      }}
+                      className="ml-0.5 opacity-60 hover:opacity-100 text-[10px]"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <span
+                    className={`text-[10px] font-medium ${
+                      isDark
+                        ? FOCUS_AGENTS_CONFIG[activeFocusAgent].textColorDark
+                        : FOCUS_AGENTS_CONFIG[activeFocusAgent].textColorLight
+                    }`}
+                  >
+                    {FOCUS_AGENTS_CONFIG[activeFocusAgent].title}
+                  </span>
+                </div>
+              )}
               <div
                 className={`w-full rounded-[22px] p-3 transition-all flex items-end gap-2 ${promptCardBg}`}
               >
@@ -864,6 +1049,7 @@ export default function Home() {
                     setSelectedModel(modelId);
                   }}
                   isDark={isDark}
+                  hasCustomAgentKey={hasCustomAgentKey}
                 />
 
                 {/* Textarea (FUNCTIONAL - high contrast & immediately visible on theme switch) */}
@@ -885,6 +1071,14 @@ export default function Home() {
                 {/* Submit Button (FUNCTIONAL) */}
                 <button
                   onClick={() => handleSubmit()}
+                  onMouseEnter={() => {
+                    if ((input.trim() || attachedFiles.length > 0) && !isLoading) {
+                      footerSendIconRef.current?.startAnimation();
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    footerSendIconRef.current?.stopAnimation();
+                  }}
                   disabled={(!input.trim() && attachedFiles.length === 0) || isLoading}
                   style={
                     (input.trim() || attachedFiles.length > 0) && !isLoading
@@ -900,7 +1094,18 @@ export default function Home() {
                   }`}
                   title="Send prompt"
                 >
-                  <ArrowUpIcon />
+                  <ArrowUpIcon
+                    ref={footerSendIconRef}
+                    size={16}
+                    duration={0.8}
+                    color={
+                      (input.trim() || attachedFiles.length > 0) && !isLoading
+                        ? "#ffffff"
+                        : isDark
+                        ? "rgba(255, 255, 255, 0.3)"
+                        : "rgba(88, 28, 135, 0.4)"
+                    }
+                  />
                 </button>
               </div>
             </div>
@@ -923,6 +1128,14 @@ export default function Home() {
           isOpen={isApiKeysModalOpen}
           onClose={() => setIsApiKeysModalOpen(false)}
           isDark={isDark}
+          onKeysSaved={(keys) => {
+            const hasKey = Boolean(keys.customAgentKey && keys.customAgentKey.trim());
+            setHasCustomAgentKey(hasKey);
+            if (!hasKey && selectedProvider === "custom") {
+              setSelectedProvider("groq");
+              setSelectedModel("openai/gpt-oss-20b");
+            }
+          }}
         />
 
         {/* AI Response Settings Modal */}

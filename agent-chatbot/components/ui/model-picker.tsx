@@ -12,7 +12,7 @@ export type ModelOption = {
 };
 
 export type ProviderOption = {
-  id: "groq" | "openrouter" | "auto";
+  id: "groq" | "openrouter" | "auto" | "custom";
   name: string;
   tagline: string;
   badge: string;
@@ -62,6 +62,24 @@ export function CascadeIcon({ className = "w-4 h-4" }: { className?: string }) {
         strokeWidth="1.2"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+// 4. Custom Autonomous Agent Icon (Emerald glow emblem)
+export function CustomAgentIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="32" height="32" rx="8" fill="#10B981" fillOpacity="0.18" />
+      <path
+        d="M16 6L23 9.5V16C23 20.5 19.5 24.5 16 26C12.5 24.5 9 20.5 9 16V9.5L16 6Z"
+        stroke="#10B981"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="16" cy="14" r="2.5" fill="#10B981" />
+      <path d="M13 19C13 17.5 14.3 16.5 16 16.5C17.7 16.5 19 17.5 19 19" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
@@ -145,11 +163,29 @@ export const PROVIDERS_CONFIG: ProviderOption[] = [
   },
 ];
 
+export const CUSTOM_AGENT_PROVIDER: ProviderOption = {
+  id: "custom",
+  name: "Custom Agent",
+  tagline: "Dedicated private endpoint & custom specialist",
+  badge: "Private BYOK",
+  icon: CustomAgentIcon,
+  models: [
+    {
+      id: "custom-agent",
+      name: "Custom Agent",
+      description: "Autonomous execution powered by your private API key",
+      badge: "🛡️ Private",
+      speed: "Deep",
+    },
+  ],
+};
+
 type ModelPickerProps = {
-  selectedProvider: "groq" | "openrouter" | "auto";
+  selectedProvider: "groq" | "openrouter" | "auto" | "custom";
   selectedModel: string;
-  onSelect: (provider: "groq" | "openrouter" | "auto", modelId: string) => void;
+  onSelect: (provider: "groq" | "openrouter" | "auto" | "custom", modelId: string) => void;
   isDark: boolean;
+  hasCustomAgentKey?: boolean;
 };
 
 export function ModelPicker({
@@ -157,13 +193,28 @@ export function ModelPicker({
   selectedModel,
   onSelect,
   isDark,
+  hasCustomAgentKey,
 }: ModelPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<"groq" | "openrouter" | "auto">(selectedProvider);
+  const [activeTab, setActiveTab] = useState<"groq" | "openrouter" | "auto" | "custom">(selectedProvider);
   const [searchQuery, setSearchQuery] = useState("");
+  const [internalHasKey, setInternalHasKey] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Sync internal check with localStorage on open or mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("astra_custom_agent_key");
+      setInternalHasKey(Boolean(stored && stored.trim()));
+    }
+  }, [hasCustomAgentKey, isOpen]);
+
+  const showCustom = hasCustomAgentKey ?? internalHasKey;
+  const availableProviders = showCustom
+    ? [...PROVIDERS_CONFIG, CUSTOM_AGENT_PROVIDER]
+    : PROVIDERS_CONFIG;
 
   const [coords, setCoords] = useState<{
     top: number;
@@ -255,15 +306,15 @@ export function ModelPicker({
   }, [isOpen]);
 
   // Find active provider and active model details
-  const currentProviderObj = PROVIDERS_CONFIG.find((p) => p.id === selectedProvider) || PROVIDERS_CONFIG[0];
+  const currentProviderObj = availableProviders.find((p) => p.id === selectedProvider) || availableProviders[0];
   const currentModelObj =
     currentProviderObj.models.find((m) => m.id === selectedModel) || currentProviderObj.models[0];
 
-  const activeProviderTabObj = PROVIDERS_CONFIG.find((p) => p.id === activeTab) || PROVIDERS_CONFIG[0];
+  const activeProviderTabObj = availableProviders.find((p) => p.id === activeTab) || availableProviders[0];
 
   // Filter models based on search query
   const filteredModels = searchQuery.trim()
-    ? PROVIDERS_CONFIG.flatMap((p) =>
+    ? availableProviders.flatMap((p) =>
         p.models
           .filter(
             (m) =>
@@ -294,7 +345,11 @@ export function ModelPicker({
           setIsOpen(!isOpen);
         }}
         className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer select-none ${
-          isDark
+          selectedProvider === "custom"
+            ? isDark
+              ? "bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 text-emerald-200 shadow-sm"
+              : "bg-emerald-50/90 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 shadow-sm"
+            : isDark
             ? "bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/35 text-purple-200 shadow-sm"
             : "bg-white/80 hover:bg-white border border-purple-200 text-purple-900 shadow-sm"
         }`}
@@ -383,9 +438,10 @@ export function ModelPicker({
                   <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-1 opacity-50">
                     Providers
                   </span>
-                  {PROVIDERS_CONFIG.map((provider) => {
+                  {availableProviders.map((provider) => {
                     const Icon = provider.icon;
                     const isActive = activeTab === provider.id;
+                    const isCustom = provider.id === "custom";
                     return (
                       <button
                         key={provider.id}
@@ -393,9 +449,17 @@ export function ModelPicker({
                         onClick={() => setActiveTab(provider.id)}
                         className={`flex items-center gap-2 px-2 py-2 rounded-xl text-left text-xs font-medium transition-all cursor-pointer ${
                           isActive
-                            ? isDark
+                            ? isCustom
+                              ? isDark
+                                ? "bg-emerald-600/30 text-emerald-200 border border-emerald-500/40 shadow-sm"
+                                : "bg-emerald-50 text-emerald-950 border border-emerald-300 shadow-sm font-semibold"
+                              : isDark
                               ? "bg-purple-600/30 text-white border border-purple-500/40 shadow-sm"
                               : "bg-white text-purple-900 border border-purple-200 shadow-sm font-semibold"
+                            : isCustom
+                            ? isDark
+                              ? "text-emerald-400/80 hover:bg-emerald-500/10 hover:text-emerald-300"
+                              : "text-emerald-700 hover:bg-emerald-50/70 hover:text-emerald-900"
                             : isDark
                             ? "text-purple-300/70 hover:bg-white/5 hover:text-white"
                             : "text-purple-700/70 hover:bg-white/50 hover:text-purple-950"
@@ -425,16 +489,21 @@ export function ModelPicker({
                   filteredModels.map((model) => {
                     const isSelected =
                       selectedModel === model.id && selectedProvider === model.providerId;
+                    const isCustom = model.providerId === "custom";
                     return (
                       <div
                         key={`${model.providerId}-${model.id}`}
                         onClick={() => {
-                          onSelect(model.providerId as "groq" | "openrouter" | "auto", model.id);
+                          onSelect(model.providerId as "groq" | "openrouter" | "auto" | "custom", model.id);
                           setIsOpen(false);
                         }}
                         className={`flex items-start justify-between p-2.5 rounded-xl cursor-pointer transition-all duration-150 border ${
                           isSelected
-                            ? isDark
+                            ? isCustom
+                              ? isDark
+                                ? "bg-emerald-600/25 border-emerald-400/50 shadow-md"
+                                : "bg-emerald-100/70 border-emerald-300 shadow-sm"
+                              : isDark
                               ? "bg-purple-600/25 border-purple-400/50 shadow-md"
                               : "bg-purple-100/70 border-purple-300 shadow-sm"
                             : isDark
@@ -447,7 +516,11 @@ export function ModelPicker({
                             <span className="text-xs font-semibold">{model.name}</span>
                             <span
                               className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
-                                isDark
+                                isCustom
+                                  ? isDark
+                                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                    : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                  : isDark
                                   ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
                                   : "bg-purple-100 text-purple-800 border border-purple-200"
                               }`}
@@ -462,7 +535,7 @@ export function ModelPicker({
 
                         {/* Selected Checkmark */}
                         {isSelected && (
-                          <div className="shrink-0 pt-0.5 text-purple-400">
+                          <div className={`shrink-0 pt-0.5 ${isCustom ? "text-emerald-400" : "text-purple-400"}`}>
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path
                                 strokeLinecap="round"
