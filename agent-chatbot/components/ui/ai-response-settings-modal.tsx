@@ -31,7 +31,22 @@ interface AiResponseSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   isDark: boolean;
+  accentColor?: string;
   onSettingsSaved?: (settings: AiResponseSettings) => void;
+}
+
+function hexToRgb(hex: string): string {
+  const cleanHex = hex.replace("#", "");
+  if (cleanHex.length === 3) {
+    const r = parseInt(cleanHex[0] + cleanHex[0], 16);
+    const g = parseInt(cleanHex[1] + cleanHex[1], 16);
+    const b = parseInt(cleanHex[2] + cleanHex[2], 16);
+    return `${r}, ${g}, ${b}`;
+  }
+  const r = parseInt(cleanHex.substring(0, 2), 16) || 168;
+  const g = parseInt(cleanHex.substring(2, 4), 16) || 85;
+  const b = parseInt(cleanHex.substring(4, 6), 16) || 247;
+  return `${r}, ${g}, ${b}`;
 }
 
 const PRESET_CHIPS = [
@@ -46,6 +61,7 @@ export function AiResponseSettingsModal({
   isOpen,
   onClose,
   isDark,
+  accentColor = "#a855f7",
   onSettingsSaved,
 }: AiResponseSettingsModalProps) {
   const [mounted, setMounted] = useState(false);
@@ -194,14 +210,15 @@ export function AiResponseSettingsModal({
         label: "Balanced",
         desc: "Natural & conversational",
         color: "text-purple-400",
-        hex: "#a855f7",
-        rgb: "168, 85, 247",
+        hex: accentColor,
+        rgb: hexToRgb(accentColor),
         badgeBorder: isDark ? "border-purple-500/40" : "border-purple-300",
         badgeBg: isDark ? "bg-purple-950/50" : "bg-purple-50",
         badgeText: isDark ? "text-purple-300" : "text-purple-900",
+        isAccent: true,
         badgeGlow: isSliding
-          ? "0 0 16px rgba(168, 85, 247, 0.55)"
-          : "0 0 8px rgba(168, 85, 247, 0.2)",
+          ? `0 0 16px ${accentColor}80`
+          : `0 0 8px ${accentColor}35`,
       };
     }
     return {
@@ -226,9 +243,9 @@ export function AiResponseSettingsModal({
     if (temperature <= 0.35) {
       return `linear-gradient(to right, #0284c7 0%, #38bdf8 ${percent}%, ${bgUnfilled} ${percent}%, ${bgUnfilled} 100%)`;
     } else if (temperature <= 0.75) {
-      return `linear-gradient(to right, #0284c7 0%, #a855f7 ${percent}%, ${bgUnfilled} ${percent}%, ${bgUnfilled} 100%)`;
+      return `linear-gradient(to right, #0284c7 0%, ${accentColor} ${percent}%, ${bgUnfilled} ${percent}%, ${bgUnfilled} 100%)`;
     } else {
-      return `linear-gradient(to right, #0284c7 0%, #a855f7 50%, #f59e0b ${percent}%, ${bgUnfilled} ${percent}%, ${bgUnfilled} 100%)`;
+      return `linear-gradient(to right, #0284c7 0%, ${accentColor} 50%, #f59e0b ${percent}%, ${bgUnfilled} ${percent}%, ${bgUnfilled} 100%)`;
     }
   };
 
@@ -280,12 +297,31 @@ export function AiResponseSettingsModal({
 
         {/* Main Modal Card */}
         <div
+          style={{
+            borderColor: isDark ? `${accentColor}40` : undefined,
+            boxShadow: isDark ? `0 24px 70px rgba(0,0,0,0.9), 0 0 35px ${accentColor}25` : undefined,
+          }}
           className={`relative w-full max-w-xl rounded-2xl overflow-hidden shadow-2xl border transition-all duration-200 animate-in zoom-in-95 fade-in-0 flex flex-col max-h-[92vh] ${
             isDark
-              ? "bg-[#130b24]/95 border-purple-500/35 text-white shadow-[0_24px_70px_rgba(0,0,0,0.9),0_0_35px_rgba(168,85,247,0.25)] backdrop-blur-2xl"
+              ? "bg-[#130b24]/95 text-white backdrop-blur-2xl"
               : "bg-white/95 border-purple-200 text-purple-950 shadow-[0_24px_70px_rgba(85,45,145,0.2)] backdrop-blur-2xl"
           }`}
         >
+          {/* Ambient Top Glow & Beam line */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-28 opacity-60 transition-all duration-300"
+            style={{
+              background: `linear-gradient(to bottom, ${accentColor}25, transparent)`,
+            }}
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-12 top-0 h-px transition-all duration-300"
+            style={{
+              background: `linear-gradient(to right, transparent, ${accentColor}80, transparent)`,
+            }}
+          />
         {/* Scoped CSS for Slider & Toggle Switch */}
         <style dangerouslySetInnerHTML={{
           __html: `
@@ -357,7 +393,7 @@ export function AiResponseSettingsModal({
               right: 0;
               bottom: 0;
               background-color: ${isDark ? "#2a1b4e" : "#d8b4fe"};
-              border: 1px solid ${isDark ? "rgba(168, 85, 247, 0.3)" : "rgba(168, 85, 247, 0.4)"};
+              border: 1px solid ${isDark ? `rgba(${hexToRgb(accentColor)}, 0.3)` : `rgba(${hexToRgb(accentColor)}, 0.4)`};
               transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
               border-radius: 30px;
             }
@@ -379,7 +415,7 @@ export function AiResponseSettingsModal({
               width: 10px;
               position: absolute;
               z-index: 10;
-              stroke: #7c3aed;
+              stroke: ${accentColor};
               stroke-width: 4;
               left: 7px;
               top: 7px;
@@ -387,9 +423,9 @@ export function AiResponseSettingsModal({
               pointer-events: none;
             }
             .astra-switch input:checked + .astra-switch-slider {
-              background: linear-gradient(135deg, #9333ea, #6366f1);
-              border-color: #a855f7;
-              box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+              background: linear-gradient(135deg, ${accentColor}, ${accentColor}cc);
+              border-color: ${accentColor};
+              box-shadow: 0 0 12px rgba(${hexToRgb(accentColor)}, 0.45);
             }
             .astra-switch input:checked + .astra-switch-slider .astra-switch-icon {
               opacity: 1;
@@ -429,17 +465,18 @@ export function AiResponseSettingsModal({
             <div
               onMouseEnter={() => sliderIconRef.current?.startAnimation()}
               onMouseLeave={() => sliderIconRef.current?.stopAnimation()}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm cursor-pointer ${
-                isDark
-                  ? "bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.2)]"
-                  : "bg-purple-100 text-purple-700 border border-purple-200"
-              }`}
+              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border cursor-pointer transition-all duration-300"
+              style={{
+                backgroundColor: `${accentColor}18`,
+                borderColor: `${accentColor}35`,
+                boxShadow: `0 0 12px ${accentColor}25`,
+              }}
             >
               <SlidersHorizontalIcon
                 ref={sliderIconRef}
                 size={20}
                 duration={1}
-                color={isDark ? "#c084fc" : "#7c3aed"}
+                color={accentColor}
               />
             </div>
             <div>
@@ -483,9 +520,25 @@ export function AiResponseSettingsModal({
                 } ${tempInfo.badgeBorder} ${tempInfo.badgeText}`}
                 style={{
                   boxShadow: tempInfo.badgeGlow,
+                  ...(temperature > 0.35 && temperature <= 0.75
+                    ? {
+                        borderColor: `${accentColor}55`,
+                        backgroundColor: `${accentColor}18`,
+                        color: isDark ? "#ffffff" : "#0f172a",
+                      }
+                    : {}),
                 }}
               >
-                <span className={tempInfo.color}>{tempInfo.label}</span>
+                <span
+                  style={
+                    temperature > 0.35 && temperature <= 0.75
+                      ? { color: accentColor }
+                      : undefined
+                  }
+                  className={tempInfo.color}
+                >
+                  {tempInfo.label}
+                </span>
                 <span className="opacity-40">|</span>
                 <span className="font-bold">{temperature.toFixed(2)}</span>
               </div>
@@ -525,6 +578,7 @@ export function AiResponseSettingsModal({
                   color: "#38bdf8",
                   rgb: "56, 189, 248",
                   isActive: temperature <= 0.35,
+                  isAccent: false,
                   activeDark: "bg-gradient-to-br from-sky-500/25 via-sky-600/10 to-transparent border-sky-400 text-sky-100 ring-1 ring-sky-400/80",
                   activeLight: "bg-sky-50 border-sky-400 text-sky-950 ring-1 ring-sky-300",
                   inactiveDark: "bg-sky-950/15 border-sky-500/20 hover:bg-sky-900/25 text-sky-300/70 hover:text-sky-200 hover:border-sky-400/40",
@@ -534,13 +588,14 @@ export function AiResponseSettingsModal({
                   label: "Balanced",
                   val: 0.7,
                   desc: "0.7 • General Tasks",
-                  color: "#c084fc",
-                  rgb: "168, 85, 247",
+                  color: accentColor,
+                  rgb: hexToRgb(accentColor),
                   isActive: temperature > 0.35 && temperature <= 0.75,
-                  activeDark: "bg-gradient-to-br from-purple-500/25 via-purple-600/10 to-transparent border-purple-400 text-purple-100 ring-1 ring-purple-400/80",
-                  activeLight: "bg-purple-50 border-purple-400 text-purple-950 ring-1 ring-purple-300",
-                  inactiveDark: "bg-purple-950/15 border-purple-500/20 hover:bg-purple-900/25 text-purple-300/70 hover:text-purple-200 hover:border-purple-400/40",
-                  inactiveLight: "bg-purple-50/40 border-purple-200 hover:bg-purple-100/60 text-purple-800/70 hover:text-purple-950",
+                  isAccent: true,
+                  activeDark: "",
+                  activeLight: "",
+                  inactiveDark: "",
+                  inactiveLight: "",
                 },
                 {
                   label: "Creative",
@@ -549,6 +604,7 @@ export function AiResponseSettingsModal({
                   color: "#f59e0b",
                   rgb: "245, 158, 11",
                   isActive: temperature > 0.75,
+                  isAccent: false,
                   activeDark: "bg-gradient-to-br from-amber-500/25 via-amber-600/10 to-transparent border-amber-400 text-amber-100 ring-1 ring-amber-400/80",
                   activeLight: "bg-amber-50 border-amber-400 text-amber-950 ring-1 ring-amber-300",
                   inactiveDark: "bg-amber-950/15 border-amber-500/20 hover:bg-amber-900/25 text-amber-300/70 hover:text-amber-200 hover:border-amber-400/40",
@@ -567,7 +623,9 @@ export function AiResponseSettingsModal({
                     type="button"
                     onClick={() => handleSliderChange(p.val)}
                     className={`relative px-2.5 py-1.5 rounded-xl border text-left cursor-pointer select-none overflow-hidden transition-all duration-200 ${
-                      p.isActive
+                      p.isAccent
+                        ? ""
+                        : p.isActive
                         ? isDark
                           ? p.activeDark
                           : p.activeLight
@@ -577,6 +635,19 @@ export function AiResponseSettingsModal({
                     } ${p.isActive && isSliding ? "scale-[1.03]" : ""}`}
                     style={{
                       boxShadow: glowStyle,
+                      ...(p.isAccent
+                        ? p.isActive
+                          ? {
+                              backgroundColor: `${accentColor}25`,
+                              borderColor: `${accentColor}80`,
+                              color: isDark ? "#ffffff" : "#0f172a",
+                            }
+                          : {
+                              backgroundColor: isDark ? `${accentColor}0a` : `${accentColor}08`,
+                              borderColor: `${accentColor}25`,
+                              color: isDark ? "#d8b4fe" : "#581c87",
+                            }
+                        : {}),
                       transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                     }}
                   >
@@ -800,12 +871,19 @@ export function AiResponseSettingsModal({
 
               {/* Character Counter */}
               <span
+                style={
+                  customInstructions.length <= 450
+                    ? {
+                        borderColor: `${accentColor}40`,
+                        color: accentColor,
+                        backgroundColor: `${accentColor}12`,
+                      }
+                    : undefined
+                }
                 className={`text-[10px] font-mono px-2 py-0.5 rounded-md border ${
                   customInstructions.length > 450
                     ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
-                    : isDark
-                    ? "bg-purple-950/40 border-purple-500/25 text-purple-300"
-                    : "bg-purple-50 border-purple-200 text-purple-800"
+                    : ""
                 }`}
               >
                 {customInstructions.length} / 500
@@ -853,13 +931,16 @@ export function AiResponseSettingsModal({
                     key={chip.label}
                     type="button"
                     onClick={() => handleAddChip(chip.text)}
+                    style={{
+                      borderColor: `${accentColor}30`,
+                    }}
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all cursor-pointer ${
                       isDark
-                        ? "bg-purple-950/40 border-purple-500/30 text-purple-200 hover:bg-purple-900/60 hover:border-purple-400"
-                        : "bg-purple-50 border-purple-200 text-purple-900 hover:bg-purple-100"
+                        ? "bg-purple-950/40 text-purple-200 hover:bg-purple-900/60"
+                        : "bg-purple-50 text-purple-900 hover:bg-purple-100"
                     }`}
                   >
-                    <span className="text-purple-400 font-bold">+</span>
+                    <span style={{ color: accentColor }} className="font-bold">+</span>
                     <span>{chip.label}</span>
                   </button>
                 ))}
@@ -875,11 +956,12 @@ export function AiResponseSettingsModal({
               <label className="text-xs font-semibold leading-tight flex items-center gap-1.5">
                 <span>Show Agent Reasoning & Chain-of-Thought</span>
                 <span
-                  className={`text-[9px] font-mono px-1.5 py-0.2 rounded border ${
-                    isDark
-                      ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
-                      : "bg-purple-100 text-purple-800 border-purple-200"
-                  }`}
+                  style={{
+                    borderColor: `${accentColor}40`,
+                    color: accentColor,
+                    backgroundColor: `${accentColor}15`,
+                  }}
+                  className="text-[9px] font-mono px-1.5 py-0.2 rounded border"
                 >
                   Agentic
                 </span>
@@ -949,11 +1031,12 @@ export function AiResponseSettingsModal({
               type="button"
               onClick={handleSave}
               disabled={savedSuccess}
-              className={`px-4 py-1.5 rounded-xl font-medium text-white transition-all shadow-lg shadow-purple-900/40 cursor-pointer flex items-center gap-1.5 ${
-                savedSuccess ? "opacity-75 cursor-default" : "hover:scale-[1.02]"
+              className={`px-5 py-2 rounded-xl font-bold text-white transition-all cursor-pointer flex items-center gap-1.5 ${
+                savedSuccess ? "opacity-75 cursor-default" : "hover:scale-[1.02] active:scale-98"
               }`}
               style={{
-                background: "linear-gradient(315deg, #9f4ac9 0%, #7e4cc9 100%)",
+                background: `linear-gradient(135deg, ${accentColor}, ${accentColor}dd)`,
+                boxShadow: `0 6px 20px ${accentColor}45`,
               }}
             >
               <span>Save & Apply</span>

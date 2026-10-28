@@ -14,14 +14,22 @@ const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffec
 
 interface AccountSettingsDropdownProps {
   isDark: boolean;
+  accentColor?: string;
+  userName?: string;
+  userDomain?: string;
   onOpenApiKeys?: () => void;
   onOpenResponseSettings?: () => void;
+  onOpenPersonalization?: () => void;
 }
 
 export function AccountSettingsDropdown({
   isDark,
+  accentColor = "#a855f7",
+  userName,
+  userDomain,
   onOpenApiKeys,
   onOpenResponseSettings,
+  onOpenPersonalization,
 }: AccountSettingsDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -128,17 +136,18 @@ export function AccountSettingsDropdown({
           {/* Animated Bolt Icon badge */}
           <div className="relative shrink-0">
             <div
-              className={`w-7 h-7 rounded-lg flex items-center justify-center shadow-sm transition-transform duration-300 group-hover:scale-105 ${
-                isDark
-                  ? "bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-[0_0_10px_rgba(168,85,247,0.2)]"
-                  : "bg-purple-100 text-purple-700 border border-purple-200"
-              }`}
+              style={{
+                backgroundColor: `${accentColor}18`,
+                borderColor: `${accentColor}35`,
+                boxShadow: `0 0 10px ${accentColor}25`,
+              }}
+              className="w-7 h-7 rounded-lg flex items-center justify-center shadow-sm transition-transform duration-300 group-hover:scale-105 border"
             >
               <BoltIcon
                 ref={boltIconRef}
                 size={18}
                 duration={1}
-                color={isDark ? "#c084fc" : "#7c3aed"}
+                color={accentColor}
               />
             </div>
             <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-[#0e071d]" />
@@ -176,10 +185,14 @@ export function AccountSettingsDropdown({
               transform: "translateY(-100%)",
               transformOrigin: "bottom left",
               zIndex: 999999,
+              borderColor: isDark ? `${accentColor}40` : undefined,
+              boxShadow: isDark
+                ? `0 24px 60px rgba(0,0,0,0.85), 0 0 30px ${accentColor}25`
+                : undefined,
             }}
             className={`rounded-2xl overflow-hidden shadow-2xl border origin-bottom-left animate-in fade-in-0 zoom-in-95 duration-200 ease-out p-1.5 ${
               isDark
-                ? "bg-[#130b24]/95 border-purple-500/35 text-white shadow-[0_24px_60px_rgba(0,0,0,0.85),0_0_30px_rgba(168,85,247,0.22)] backdrop-blur-2xl"
+                ? "bg-[#130b24]/95 text-white backdrop-blur-2xl"
                 : "bg-white/95 border-purple-200 text-purple-950 shadow-[0_24px_60px_rgba(85,45,145,0.2)] backdrop-blur-2xl"
             }`}
           >
@@ -190,23 +203,32 @@ export function AccountSettingsDropdown({
               }`}
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 via-fuchsia-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-md">
-                  A
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-md uppercase transition-all duration-300"
+                  style={{
+                    background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
+                    boxShadow: `0 2px 10px ${accentColor}40`,
+                  }}
+                >
+                  {(userName || "Aniket Lad").trim().charAt(0) || "A"}
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-semibold truncate leading-tight">Aniket Lad</p>
+                    <p className="text-xs font-semibold truncate leading-tight">{userName || "Aniket Lad"}</p>
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                   </div>
                   <p className="text-[10px] opacity-60 truncate">Free Plan • v2.0</p>
                 </div>
               </div>
               <span
-                className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-md font-semibold tracking-wider ${
-                  isDark ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" : "bg-purple-200/80 text-purple-800"
-                }`}
+                className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-md font-semibold tracking-wider border transition-all duration-300"
+                style={{
+                  borderColor: `${accentColor}40`,
+                  color: accentColor,
+                  backgroundColor: `${accentColor}18`,
+                }}
               >
-                Agentic
+                {userDomain || "Agentic"}
               </span>
             </div>
 
@@ -236,25 +258,28 @@ export function AccountSettingsDropdown({
               >
                 <div className="flex items-center gap-2.5">
                   <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover/item:scale-105 ${
-                      isDark ? "bg-purple-500/15 text-purple-300" : "bg-purple-100 text-purple-700"
-                    }`}
+                    style={{
+                      backgroundColor: `${accentColor}18`,
+                      borderColor: `${accentColor}30`,
+                    }}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border transition-transform duration-200 group-hover/item:scale-105"
                   >
                     <KeyRoundIcon
                       ref={keyIconRef}
                       size={16}
                       duration={1}
-                      color={isDark ? "#c084fc" : "#7c3aed"}
+                      color={accentColor}
                     />
                   </div>
                   <span>Custom API Keys</span>
                 </div>
                 <span
-                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
-                    isDark
-                      ? "bg-purple-950/60 border-purple-500/30 text-purple-300"
-                      : "bg-purple-50 border-purple-200 text-purple-700"
-                  }`}
+                  style={{
+                    borderColor: `${accentColor}40`,
+                    color: accentColor,
+                    backgroundColor: `${accentColor}12`,
+                  }}
+                  className="text-[9px] font-mono px-1.5 py-0.5 rounded border"
                 >
                   BYOK
                 </span>
@@ -277,35 +302,43 @@ export function AccountSettingsDropdown({
               >
                 <div className="flex items-center gap-2.5">
                   <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover/item:scale-105 ${
-                      isDark ? "bg-purple-500/15 text-purple-300" : "bg-purple-100 text-purple-700"
-                    }`}
+                    style={{
+                      backgroundColor: `${accentColor}18`,
+                      borderColor: `${accentColor}30`,
+                    }}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border transition-transform duration-200 group-hover/item:scale-105"
                   >
                     <SlidersHorizontalIcon
                       ref={sliderIconRef}
                       size={16}
                       duration={1}
-                      color={isDark ? "#c084fc" : "#7c3aed"}
+                      color={accentColor}
                     />
                   </div>
                   <span>AI Response Settings</span>
                 </div>
                 <span
-                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
-                    isDark
-                      ? "bg-purple-950/60 border-purple-500/30 text-purple-300"
-                      : "bg-purple-50 border-purple-200 text-purple-700"
-                  }`}
+                  style={{
+                    borderColor: `${accentColor}40`,
+                    color: accentColor,
+                    backgroundColor: `${accentColor}12`,
+                  }}
+                  className="text-[9px] font-mono px-1.5 py-0.5 rounded border"
                 >
                   Style
                 </span>
               </button>
 
               {/* 3. Appearance & Performance */}
-              <div
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenPersonalization) onOpenPersonalization();
+                  setIsOpen(false);
+                }}
                 onMouseEnter={() => appearIconRef.current?.startAnimation()}
                 onMouseLeave={() => appearIconRef.current?.stopAnimation()}
-                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-colors select-none cursor-default group/item ${
+                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-colors select-none cursor-pointer group/item text-left ${
                   isDark
                     ? "hover:bg-purple-900/30 text-purple-100"
                     : "hover:bg-purple-100/60 text-purple-950"
@@ -313,29 +346,32 @@ export function AccountSettingsDropdown({
               >
                 <div className="flex items-center gap-2.5">
                   <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover/item:scale-105 ${
-                      isDark ? "bg-purple-500/15 text-purple-300" : "bg-purple-100 text-purple-700"
-                    }`}
+                    style={{
+                      backgroundColor: `${accentColor}18`,
+                      borderColor: `${accentColor}30`,
+                    }}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border transition-transform duration-200 group-hover/item:scale-105"
                   >
                     <UserRoundCogIcon
                       ref={appearIconRef}
                       size={16}
                       duration={1}
-                      color={isDark ? "#c084fc" : "#7c3aed"}
+                      color={accentColor}
                     />
                   </div>
                   <span>Appearance & Performance</span>
                 </div>
                 <span
-                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
-                    isDark
-                      ? "bg-purple-950/60 border-purple-500/30 text-purple-300"
-                      : "bg-purple-50 border-purple-200 text-purple-700"
-                  }`}
+                  style={{
+                    borderColor: `${accentColor}40`,
+                    color: accentColor,
+                    backgroundColor: `${accentColor}12`,
+                  }}
+                  className="text-[9px] font-mono px-1.5 py-0.5 rounded border"
                 >
                   Theme
                 </span>
-              </div>
+              </button>
             </div>
 
             {/* Section Divider */}

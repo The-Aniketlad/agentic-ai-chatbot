@@ -20,6 +20,7 @@ interface FileUploadCardProps {
   onFileRemove: (id: string) => void;
   triggerRef: React.RefObject<HTMLElement | null>;
   isDark: boolean;
+  accentColor?: string;
 }
 
 export function FileUploadCard({
@@ -30,6 +31,7 @@ export function FileUploadCard({
   onFileRemove,
   triggerRef,
   isDark,
+  accentColor = "#a855f7",
 }: FileUploadCardProps) {
   const [mounted, setMounted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -170,10 +172,14 @@ export function FileUploadCard({
         transform: "translateY(-100%)",
         transformOrigin: "bottom left",
         zIndex: 999999,
+        borderColor: isDark ? `${accentColor}40` : undefined,
+        boxShadow: isDark
+          ? `0 24px 60px rgba(0,0,0,0.85), 0 0 30px ${accentColor}25`
+          : undefined,
       }}
       className={`rounded-2xl overflow-hidden shadow-2xl border origin-bottom-left animate-in fade-in-0 zoom-in-95 duration-200 ease-out ${
         isDark
-          ? "bg-[#130b24]/95 border-purple-500/35 text-white shadow-[0_24px_60px_rgba(0,0,0,0.85),0_0_30px_rgba(168,85,247,0.22)] backdrop-blur-2xl"
+          ? "bg-[#130b24]/95 text-white backdrop-blur-2xl"
           : "bg-white/95 border-purple-200 text-purple-950 shadow-[0_24px_60px_rgba(85,45,145,0.2)] backdrop-blur-2xl"
       }`}
     >
@@ -185,11 +191,12 @@ export function FileUploadCard({
       >
         <div className="flex items-center gap-3">
           <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-              isDark
-                ? "bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.2)]"
-                : "bg-purple-100 text-purple-700 border border-purple-200"
-            }`}
+            style={{
+              backgroundColor: `${accentColor}18`,
+              borderColor: `${accentColor}35`,
+              color: accentColor,
+            }}
+            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition-all duration-300"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -229,11 +236,18 @@ export function FileUploadCard({
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
+          style={
+            isDragging
+              ? {
+                  borderColor: accentColor,
+                  backgroundColor: `${accentColor}20`,
+                  boxShadow: `0 0 20px ${accentColor}40`,
+                }
+              : undefined
+          }
           className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center text-center transition-all duration-200 cursor-pointer ${
             isDragging
-              ? isDark
-                ? "border-purple-400 bg-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
-                : "border-purple-600 bg-purple-100/70"
+              ? ""
               : isDark
               ? "border-purple-500/30 hover:border-purple-400/60 bg-purple-950/20 hover:bg-purple-950/40"
               : "border-purple-200 hover:border-purple-400 bg-purple-50/30 hover:bg-purple-50/70"
@@ -248,9 +262,11 @@ export function FileUploadCard({
           />
 
           <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center mb-2.5 ${
-              isDark ? "bg-purple-500/15 text-purple-300" : "bg-purple-100 text-purple-600"
-            }`}
+            style={{
+              backgroundColor: `${accentColor}18`,
+              color: accentColor,
+            }}
+            className="w-10 h-10 rounded-full flex items-center justify-center mb-2.5 transition-all duration-300"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -263,7 +279,7 @@ export function FileUploadCard({
           </div>
 
           <p className="text-xs font-semibold">
-            Choose a file or <span className="text-purple-400 underline underline-offset-2">browse</span>
+            Choose a file or <span style={{ color: accentColor }} className="underline underline-offset-2">browse</span>
           </p>
           <p className="text-[10px] opacity-60 mt-1">
             PDF, CSV, JSON, TXT, MD, images up to 50 MB
@@ -312,7 +328,7 @@ export function FileUploadCard({
                       <span>{formatFileSize(item.file.size)}</span>
                       <span>•</span>
                       {item.status === "uploading" ? (
-                        <span className="text-purple-400 font-medium">Reading {item.progress}%</span>
+                        <span style={{ color: accentColor }} className="font-medium">Reading {item.progress}%</span>
                       ) : (
                         <span className="text-emerald-400 font-medium flex items-center gap-1">
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -327,8 +343,11 @@ export function FileUploadCard({
                     {item.status === "uploading" && (
                       <div className="w-full bg-purple-950/60 rounded-full h-1 mt-1.5 overflow-hidden">
                         <div
-                          className="bg-gradient-to-r from-purple-500 to-indigo-400 h-full rounded-full transition-all duration-300"
-                          style={{ width: `${item.progress}%` }}
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${item.progress}%`,
+                            background: `linear-gradient(90deg, ${accentColor}, #818cf8)`,
+                          }}
                         />
                       </div>
                     )}

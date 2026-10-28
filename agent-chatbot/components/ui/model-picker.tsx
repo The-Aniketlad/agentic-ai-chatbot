@@ -186,6 +186,7 @@ type ModelPickerProps = {
   onSelect: (provider: "groq" | "openrouter" | "auto" | "custom", modelId: string) => void;
   isDark: boolean;
   hasCustomAgentKey?: boolean;
+  accentColor?: string;
 };
 
 export function ModelPicker({
@@ -194,6 +195,7 @@ export function ModelPicker({
   onSelect,
   isDark,
   hasCustomAgentKey,
+  accentColor = "#a855f7",
 }: ModelPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -344,14 +346,22 @@ export function ModelPicker({
           }
           setIsOpen(!isOpen);
         }}
-        className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer select-none ${
+        style={
+          selectedProvider !== "custom"
+            ? {
+                borderColor: `${accentColor}40`,
+                backgroundColor: isDark ? `${accentColor}18` : undefined,
+              }
+            : undefined
+        }
+        className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer select-none border ${
           selectedProvider === "custom"
             ? isDark
-              ? "bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 text-emerald-200 shadow-sm"
-              : "bg-emerald-50/90 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 shadow-sm"
+              ? "bg-emerald-950/40 hover:bg-emerald-900/50 border-emerald-500/40 text-emerald-200 shadow-sm"
+              : "bg-emerald-50/90 hover:bg-emerald-100 border-emerald-300 text-emerald-900 shadow-sm"
             : isDark
-            ? "bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/35 text-purple-200 shadow-sm"
-            : "bg-white/80 hover:bg-white border border-purple-200 text-purple-900 shadow-sm"
+            ? "hover:opacity-90 text-purple-100 shadow-sm"
+            : "bg-white/80 hover:bg-white text-purple-900 shadow-sm"
         }`}
         title="Select AI Agent / Model Provider"
         aria-expanded={isOpen}
@@ -381,10 +391,14 @@ export function ModelPicker({
               width: `${coords.width}px`,
               transform: coords.openUpwards ? "translateY(-100%)" : "none",
               zIndex: 999999,
+              borderColor: isDark ? `${accentColor}40` : undefined,
+              boxShadow: isDark
+                ? `0 20px 50px rgba(0,0,0,0.85), 0 0 24px ${accentColor}25`
+                : undefined,
             }}
             className={`rounded-2xl overflow-hidden shadow-2xl transition-all duration-200 border animate-in fade-in-0 zoom-in-95 ${
               isDark
-                ? "bg-[#140c24]/95 border-purple-500/35 text-white shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_24px_rgba(168,85,247,0.22)] backdrop-blur-2xl"
+                ? "bg-[#140c24]/95 text-white backdrop-blur-2xl"
                 : "bg-white/95 border-purple-200 text-purple-950 shadow-[0_20px_50px_rgba(85,45,145,0.22)] backdrop-blur-2xl"
             }`}
           >
@@ -395,7 +409,8 @@ export function ModelPicker({
               }`}
             >
               <svg
-                className={`w-3.5 h-3.5 ${isDark ? "text-purple-400" : "text-purple-600"}`}
+                style={{ color: accentColor }}
+                className="w-3.5 h-3.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

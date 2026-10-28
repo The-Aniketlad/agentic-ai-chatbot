@@ -12,6 +12,7 @@ interface ApiKeysModalProps {
   isOpen: boolean;
   onClose: () => void;
   isDark: boolean;
+  accentColor?: string;
   onKeysSaved?: (keys: { groqKey: string; openRouterKey: string; customAgentKey?: string }) => void;
 }
 
@@ -19,6 +20,7 @@ export function ApiKeysModal({
   isOpen,
   onClose,
   isDark,
+  accentColor = "#a855f7",
   onKeysSaved,
 }: ApiKeysModalProps) {
   const [mounted, setMounted] = useState(false);
@@ -200,33 +202,54 @@ export function ApiKeysModal({
 
         {/* Main Modal Card */}
         <div
+          style={{
+            borderColor: isDark ? `${accentColor}40` : undefined,
+            boxShadow: isDark ? `0 24px 70px rgba(0,0,0,0.9), 0 0 35px ${accentColor}25` : undefined,
+          }}
           className={`relative w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl border transition-all duration-200 animate-in zoom-in-95 fade-in-0 ${
             isDark
-              ? "bg-[#130b24]/95 border-purple-500/35 text-white shadow-[0_24px_70px_rgba(0,0,0,0.9),0_0_35px_rgba(168,85,247,0.25)] backdrop-blur-2xl"
+              ? "bg-[#130b24]/95 text-white backdrop-blur-2xl"
               : "bg-white/95 border-purple-200 text-purple-950 shadow-[0_24px_70px_rgba(85,45,145,0.2)] backdrop-blur-2xl"
           }`}
         >
-        {/* 1. Header */}
-        <div
-          className={`flex items-center justify-between p-4 md:p-5 border-b ${
-            isDark ? "border-purple-500/20 bg-purple-950/30" : "border-purple-100 bg-purple-50/50"
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
-                isDark
-                  ? "bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.2)]"
-                  : "bg-purple-100 text-purple-700 border border-purple-200"
-              }`}
-            >
-              <KeyRoundIcon size={20} duration={1} color={isDark ? "#c084fc" : "#7c3aed"} />
+          {/* Ambient Top Glow & Beam line */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-24 opacity-60 transition-all duration-300"
+            style={{
+              background: `linear-gradient(to bottom, ${accentColor}25, transparent)`,
+            }}
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-10 top-0 h-px transition-all duration-300"
+            style={{
+              background: `linear-gradient(to right, transparent, ${accentColor}80, transparent)`,
+            }}
+          />
+
+          {/* 1. Header */}
+          <div
+            className={`relative flex items-center justify-between p-4 md:p-5 border-b ${
+              isDark ? "border-purple-500/20 bg-purple-950/30" : "border-purple-100 bg-purple-50/50"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm border transition-all duration-300"
+                style={{
+                  backgroundColor: `${accentColor}18`,
+                  borderColor: `${accentColor}35`,
+                  boxShadow: `0 0 12px ${accentColor}25`,
+                }}
+              >
+                <KeyRoundIcon size={20} duration={1} color={accentColor} />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold leading-tight">Custom API Keys</h3>
+                <p className="text-xs opacity-70 mt-0.5">Bring Your Own Key (BYOK) for unlimited requests</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-semibold leading-tight">Custom API Keys</h3>
-              <p className="text-xs opacity-70 mt-0.5">Bring Your Own Key (BYOK) for unlimited requests</p>
-            </div>
-          </div>
 
           {/* Close button */}
           <button
@@ -291,11 +314,20 @@ export function ApiKeysModal({
 
               {/* Status Badge */}
               <span
+                style={
+                  !groqKey.trim()
+                    ? {
+                        borderColor: `${accentColor}40`,
+                        color: accentColor,
+                        backgroundColor: `${accentColor}12`,
+                      }
+                    : undefined
+                }
                 className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
                   groqKey.trim()
                     ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 font-semibold"
                     : isDark
-                    ? "bg-purple-950/40 border-purple-500/25 text-purple-300"
+                    ? ""
                     : "bg-purple-100 border-purple-200 text-purple-800"
                 }`}
               >
@@ -351,9 +383,12 @@ export function ApiKeysModal({
                   <button
                     type="button"
                     onClick={() => handlePaste("groq")}
-                    className={`text-[10px] px-2 py-0.5 rounded-md font-medium border transition ${
-                      isDark ? "bg-purple-900/40 border-purple-500/30 hover:bg-purple-900/70" : "bg-purple-100 border-purple-200 hover:bg-purple-200"
-                    }`}
+                    style={{
+                      borderColor: `${accentColor}40`,
+                      backgroundColor: `${accentColor}18`,
+                      color: accentColor,
+                    }}
+                    className="text-[10px] px-2 py-0.5 rounded-md font-medium border transition cursor-pointer hover:opacity-80"
                   >
                     Paste
                   </button>
@@ -395,7 +430,8 @@ export function ApiKeysModal({
                 href="https://console.groq.com/keys"
                 target="_blank"
                 rel="noreferrer"
-                className="text-purple-400 hover:text-purple-300 underline underline-offset-2 flex items-center gap-0.5"
+                style={{ color: accentColor }}
+                className="hover:opacity-80 underline underline-offset-2 flex items-center gap-0.5"
               >
                 <span>Get free key</span>
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -427,11 +463,20 @@ export function ApiKeysModal({
 
               {/* Status Badge */}
               <span
+                style={
+                  !openRouterKey.trim()
+                    ? {
+                        borderColor: `${accentColor}40`,
+                        color: accentColor,
+                        backgroundColor: `${accentColor}12`,
+                      }
+                    : undefined
+                }
                 className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
                   openRouterKey.trim()
                     ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 font-semibold"
                     : isDark
-                    ? "bg-purple-950/40 border-purple-500/25 text-purple-300"
+                    ? ""
                     : "bg-purple-100 border-purple-200 text-purple-800"
                 }`}
               >
@@ -487,9 +532,12 @@ export function ApiKeysModal({
                   <button
                     type="button"
                     onClick={() => handlePaste("openrouter")}
-                    className={`text-[10px] px-2 py-0.5 rounded-md font-medium border transition ${
-                      isDark ? "bg-purple-900/40 border-purple-500/30 hover:bg-purple-900/70" : "bg-purple-100 border-purple-200 hover:bg-purple-200"
-                    }`}
+                    style={{
+                      borderColor: `${accentColor}40`,
+                      backgroundColor: `${accentColor}18`,
+                      color: accentColor,
+                    }}
+                    className="text-[10px] px-2 py-0.5 rounded-md font-medium border transition cursor-pointer hover:opacity-80"
                   >
                     Paste
                   </button>
@@ -531,7 +579,8 @@ export function ApiKeysModal({
                 href="https://openrouter.ai/keys"
                 target="_blank"
                 rel="noreferrer"
-                className="text-purple-400 hover:text-purple-300 underline underline-offset-2 flex items-center gap-0.5"
+                style={{ color: accentColor }}
+                className="hover:opacity-80 underline underline-offset-2 flex items-center gap-0.5"
               >
                 <span>Get key</span>
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -563,11 +612,20 @@ export function ApiKeysModal({
 
               {/* Status Badge */}
               <span
+                style={
+                  !customAgentKey.trim()
+                    ? {
+                        borderColor: `${accentColor}40`,
+                        color: accentColor,
+                        backgroundColor: `${accentColor}12`,
+                      }
+                    : undefined
+                }
                 className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
                   customAgentKey.trim()
                     ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 font-semibold"
                     : isDark
-                    ? "bg-purple-950/40 border-purple-500/25 text-purple-300"
+                    ? ""
                     : "bg-purple-100 border-purple-200 text-purple-800"
                 }`}
               >
@@ -623,9 +681,12 @@ export function ApiKeysModal({
                   <button
                     type="button"
                     onClick={() => handlePaste("agent")}
-                    className={`text-[10px] px-2 py-0.5 rounded-md font-medium border transition ${
-                      isDark ? "bg-purple-900/40 border-purple-500/30 hover:bg-purple-900/70" : "bg-purple-100 border-purple-200 hover:bg-purple-200"
-                    }`}
+                    style={{
+                      borderColor: `${accentColor}40`,
+                      backgroundColor: `${accentColor}18`,
+                      color: accentColor,
+                    }}
+                    className="text-[10px] px-2 py-0.5 rounded-md font-medium border transition cursor-pointer hover:opacity-80"
                   >
                     Paste
                   </button>
@@ -697,11 +758,12 @@ export function ApiKeysModal({
               type="button"
               onClick={handleSave}
               disabled={savedSuccess}
-              className={`px-4 py-1.5 rounded-xl font-medium text-white transition-all shadow-lg shadow-purple-900/40 cursor-pointer flex items-center gap-1.5 ${
-                savedSuccess ? "opacity-75 cursor-default" : "hover:scale-[1.02]"
+              className={`px-5 py-2 rounded-xl font-bold text-white transition-all cursor-pointer flex items-center gap-1.5 ${
+                savedSuccess ? "opacity-75 cursor-default" : "hover:scale-[1.02] active:scale-98"
               }`}
               style={{
-                background: "linear-gradient(315deg, #9f4ac9 0%, #7e4cc9 100%)",
+                background: `linear-gradient(135deg, ${accentColor}, ${accentColor}dd)`,
+                boxShadow: `0 6px 20px ${accentColor}45`,
               }}
             >
               <span>Save & Apply</span>

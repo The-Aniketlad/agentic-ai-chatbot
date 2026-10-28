@@ -19,12 +19,30 @@ import { AccountSettingsDropdown } from "@/components/ui/account-settings-dropdo
 import { ClearHistoryDropdown } from "@/components/ui/clear-history-dropdown";
 import { ApiKeysModal } from "@/components/ui/api-keys-modal";
 import { AiResponseSettingsModal } from "@/components/ui/ai-response-settings-modal";
+import {
+  PersonalizationModal,
+  type FontDensity,
+} from "@/components/ui/personalization-modal";
 
 type Message = {
   role: "user" | "assistant";
   content: string;
   agentTitle?: string;
 };
+
+function hexToRgb(hex: string): string {
+  const cleanHex = hex.replace("#", "");
+  if (cleanHex.length === 3) {
+    const r = parseInt(cleanHex[0] + cleanHex[0], 16);
+    const g = parseInt(cleanHex[1] + cleanHex[1], 16);
+    const b = parseInt(cleanHex[2] + cleanHex[2], 16);
+    return `${r}, ${g}, ${b}`;
+  }
+  const r = parseInt(cleanHex.substring(0, 2), 16) || 168;
+  const g = parseInt(cleanHex.substring(2, 4), 16) || 85;
+  const b = parseInt(cleanHex.substring(4, 6), 16) || 247;
+  return `${r}, ${g}, ${b}`;
+}
 
 // Custom SVG Icons
 function AtSignIcon() {
@@ -130,6 +148,11 @@ export default function Home() {
   const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
   const [isApiKeysModalOpen, setIsApiKeysModalOpen] = useState(false);
   const [isResponseSettingsOpen, setIsResponseSettingsOpen] = useState(false);
+  const [isPersonalizationModalOpen, setIsPersonalizationModalOpen] = useState(false);
+  const [accentColor, setAccentColor] = useState<string>("#a855f7");
+  const [fontDensity, setFontDensity] = useState<FontDensity>("default");
+  const [userName, setUserName] = useState<string>("Aniket Lad");
+  const [userDomain, setUserDomain] = useState<string>("developer");
   const [attachedFiles, setAttachedFiles] = useState<UploadedFile[]>([]);
   const [activeTrigger, setActiveTrigger] = useState<"hero" | "footer">("hero");
   const paperclipBtnRef = useRef<HTMLButtonElement>(null);
@@ -197,10 +220,36 @@ export default function Home() {
     const hour = new Date().getHours();
     setGreeting(hour < 12 ? "Good Morning" : hour < 18 ? "Good Afternoon" : "Good Evening");
 
-    // Restore saved theme
-    const savedTheme = localStorage.getItem("astra_theme") as "dark" | "light" | null;
-    if (savedTheme === "light" || savedTheme === "dark") {
-      setTheme(savedTheme);
+    // Restore saved theme and personalization
+    const savedTheme = localStorage.getItem("astra_theme");
+    if (savedTheme === "system") {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      applyTheme(prefersDark ? "dark" : "light");
+    } else if (savedTheme === "light" || savedTheme === "dark") {
+      applyTheme(savedTheme);
+    }
+
+    const savedDensity = (localStorage.getItem("astra_font_density") as FontDensity) || "default";
+    setFontDensity(savedDensity);
+
+    const savedAccent = localStorage.getItem("astra_accent_color") || "#a855f7";
+    setAccentColor(savedAccent);
+    document.documentElement.style.setProperty("--astra-accent", savedAccent);
+    document.documentElement.style.setProperty("--astra-accent-rgb", hexToRgb(savedAccent));
+
+    const savedBattery = localStorage.getItem("astra_battery_saver") === "true";
+    if (savedBattery) {
+      document.documentElement.classList.add("battery-saver");
+    }
+
+    const savedName = localStorage.getItem("astra_user_name");
+    if (savedName && savedName.trim()) {
+      setUserName(savedName.trim());
+    }
+
+    const savedDomain = localStorage.getItem("astra_user_domain");
+    if (savedDomain && savedDomain.trim()) {
+      setUserDomain(savedDomain.trim());
     }
 
     // Hydrate custom agent key status
@@ -231,11 +280,9 @@ export default function Home() {
     }
   }, [messages]);
 
-  // 3. Theme toggle (Manual user action via sun/moon button only)
-  function toggleTheme() {
-    const nextTheme = theme === "dark" ? "light" : "dark";
+  // 3. Theme application helper
+  function applyTheme(nextTheme: "dark" | "light") {
     setTheme(nextTheme);
-    localStorage.setItem("astra_theme", nextTheme);
     if (nextTheme === "light") {
       document.documentElement.classList.add("light");
       document.documentElement.classList.remove("dark");
@@ -247,6 +294,13 @@ export default function Home() {
       document.documentElement.style.backgroundColor = "#0b0714";
       document.documentElement.style.backgroundImage = "none";
     }
+  }
+
+  // Manual theme toggle
+  function toggleTheme() {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    localStorage.setItem("astra_theme", nextTheme);
+    applyTheme(nextTheme);
   }
 
   // 4. Start fresh conversation (Local UI reset only, NEVER calls LLM)
@@ -515,8 +569,12 @@ export default function Home() {
         <div className="p-3 border-t border-purple-500/15">
           <AccountSettingsDropdown
             isDark={isDark}
+            accentColor={accentColor}
+            userName={userName}
+            userDomain={userDomain}
             onOpenApiKeys={() => setIsApiKeysModalOpen(true)}
             onOpenResponseSettings={() => setIsResponseSettingsOpen(true)}
+            onOpenPersonalization={() => setIsPersonalizationModalOpen(true)}
           />
         </div>
       </aside>
@@ -610,17 +668,22 @@ export default function Home() {
                 {/* Fluid Dynamic WebGL Orb (Compact, sleek & proportionate) */}
                 <div className="relative mb-2.5 flex items-center justify-center select-none">
                   {/* Subtle soft cosmic ambient glow behind fluid orb */}
-                  <div className="absolute w-36 h-36 rounded-full blur-2xl pointer-events-none opacity-40 transition-all duration-700 orb-ambient-glow" />
+                  <div
+                    className="absolute w-36 h-36 rounded-full blur-2xl pointer-events-none opacity-40 transition-all duration-700 orb-ambient-glow"
+                    style={{
+                      background: `radial-gradient(circle, ${accentColor} 0%, ${accentColor}60 45%, transparent 75%)`,
+                    }}
+                  />
 
                   <FluidOrb
                     size={140}
-                    color={isDark ? "#9f4ac9" : "#845fe2"}
+                    color={accentColor}
                     className="shadow-xl shadow-purple-950/25"
                   />
                 </div>
 
                 <h1 suppressHydrationWarning className="text-2xl md:text-3xl font-semibold tracking-tight mb-1">
-                  {greeting}, Aniket.
+                  {greeting}, {userName}.
                 </h1>
                 <p className="text-sm md:text-base font-normal opacity-70">
                   How can I help you today?
@@ -739,6 +802,7 @@ export default function Home() {
                         }}
                         isDark={isDark}
                         hasCustomAgentKey={hasCustomAgentKey}
+                        accentColor={accentColor}
                       />
 
                       {/* Interactive Preset Buttons: Selects agent without triggering prompt execution */}
@@ -817,12 +881,15 @@ export default function Home() {
                       disabled={(!input.trim() && attachedFiles.length === 0) || isLoading}
                       style={
                         (input.trim() || attachedFiles.length > 0) && !isLoading
-                          ? { background: "linear-gradient(315deg, #9f4ac9 0%, #7e4cc9 100%)" }
+                          ? {
+                              background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
+                              boxShadow: `0 4px 18px ${accentColor}55`,
+                            }
                           : undefined
                       }
                       className={`w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
                         (input.trim() || attachedFiles.length > 0) && !isLoading
-                          ? "text-white shadow-lg shadow-purple-900/50 hover:scale-105 cursor-pointer"
+                          ? "text-white hover:scale-105 cursor-pointer"
                           : isDark
                           ? "bg-white/10 text-white/30 cursor-not-allowed"
                           : "bg-white/40 text-purple-900/40 border border-white/50 cursor-not-allowed"
@@ -923,7 +990,15 @@ export default function Home() {
             </div>
           ) : (
             /* STATE B: Active Conversation Stream */
-            <div className="max-w-3xl mx-auto py-6 space-y-6">
+            <div
+              className={`max-w-3xl mx-auto py-6 ${
+                fontDensity === "compact"
+                  ? "space-y-3.5"
+                  : fontDensity === "spacious"
+                  ? "space-y-8"
+                  : "space-y-6"
+              }`}
+            >
               {messages.map((msg, idx) => (
                 <div
                   key={idx}
@@ -931,8 +1006,8 @@ export default function Home() {
                 >
                   {/* Active Agent Badge */}
                   {msg.role === "assistant" && msg.agentTitle && (
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-purple-400 mb-1.5 ml-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold mb-1.5 ml-1" style={{ color: accentColor }}>
+                      <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: accentColor }} />
                       <span>{msg.agentTitle}</span>
                     </div>
                   )}
@@ -941,12 +1016,21 @@ export default function Home() {
                   <div
                     style={
                       msg.role === "user"
-                        ? { background: "linear-gradient(315deg, #9f4ac9 0%, #7e4cc9 100%)" }
+                        ? {
+                            background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
+                            boxShadow: `0 6px 20px ${accentColor}35`,
+                          }
                         : undefined
                     }
-                    className={`max-w-[88%] md:max-w-[82%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                    className={`max-w-[88%] md:max-w-[82%] rounded-2xl whitespace-pre-wrap ${
+                      fontDensity === "compact"
+                        ? "px-3.5 py-2 text-[13px] leading-snug"
+                        : fontDensity === "spacious"
+                        ? "px-5 py-4 text-[15px] leading-loose"
+                        : "px-4 py-3 text-sm leading-relaxed"
+                    } ${
                       msg.role === "user"
-                        ? "text-white rounded-br-sm shadow-lg shadow-purple-950/30"
+                        ? "text-white rounded-br-sm"
                         : `${
                             isDark
                               ? "bg-[#140e24]/80 border-purple-500/20 text-[#ede8f5]"
@@ -960,8 +1044,8 @@ export default function Home() {
               ))}
 
               {isLoading && (
-                <div className="flex items-center gap-2 text-xs text-purple-400 ml-1">
-                  <div className="w-2 h-2 rounded-full bg-purple-500 animate-ping" />
+                <div className="flex items-center gap-2 text-xs ml-1" style={{ color: accentColor }}>
+                  <div className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: accentColor }} />
                   <span>Astra AI is thinking & streaming...</span>
                 </div>
               )}
@@ -1050,6 +1134,7 @@ export default function Home() {
                   }}
                   isDark={isDark}
                   hasCustomAgentKey={hasCustomAgentKey}
+                  accentColor={accentColor}
                 />
 
                 {/* Textarea (FUNCTIONAL - high contrast & immediately visible on theme switch) */}
@@ -1082,12 +1167,15 @@ export default function Home() {
                   disabled={(!input.trim() && attachedFiles.length === 0) || isLoading}
                   style={
                     (input.trim() || attachedFiles.length > 0) && !isLoading
-                      ? { background: "linear-gradient(315deg, #9f4ac9 0%, #7e4cc9 100%)" }
+                      ? {
+                          background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
+                          boxShadow: `0 4px 18px ${accentColor}55`,
+                        }
                       : undefined
                   }
                   className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center transition-all ${
                     (input.trim() || attachedFiles.length > 0) && !isLoading
-                      ? "text-white shadow-lg shadow-purple-900/50 hover:scale-105 cursor-pointer"
+                      ? "text-white hover:scale-105 cursor-pointer"
                       : isDark
                       ? "bg-white/10 text-white/30 cursor-not-allowed"
                       : "bg-white/40 text-purple-900/40 border border-white/50 cursor-not-allowed"
@@ -1121,6 +1209,7 @@ export default function Home() {
           onFileRemove={handleFileRemove}
           triggerRef={activeTrigger === "hero" ? paperclipBtnRef : footerPaperclipBtnRef}
           isDark={isDark}
+          accentColor={accentColor}
         />
 
         {/* Custom API Keys (BYOK) Modal */}
@@ -1128,6 +1217,7 @@ export default function Home() {
           isOpen={isApiKeysModalOpen}
           onClose={() => setIsApiKeysModalOpen(false)}
           isDark={isDark}
+          accentColor={accentColor}
           onKeysSaved={(keys) => {
             const hasKey = Boolean(keys.customAgentKey && keys.customAgentKey.trim());
             setHasCustomAgentKey(hasKey);
@@ -1143,6 +1233,38 @@ export default function Home() {
           isOpen={isResponseSettingsOpen}
           onClose={() => setIsResponseSettingsOpen(false)}
           isDark={isDark}
+          accentColor={accentColor}
+        />
+
+        {/* Personalization / Appearance & Performance Modal */}
+        <PersonalizationModal
+          isOpen={isPersonalizationModalOpen}
+          onClose={() => setIsPersonalizationModalOpen(false)}
+          isDark={isDark}
+          onSettingsSaved={(settings) => {
+            // Apply Theme
+            if (settings.theme === "system") {
+              const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+              applyTheme(prefersDark ? "dark" : "light");
+            } else {
+              applyTheme(settings.theme);
+            }
+            // Apply Font Density
+            setFontDensity(settings.fontDensity);
+            // Apply Accent Color
+            setAccentColor(settings.accentColor);
+            document.documentElement.style.setProperty("--astra-accent", settings.accentColor);
+            document.documentElement.style.setProperty("--astra-accent-rgb", hexToRgb(settings.accentColor));
+            // Apply Battery Saver
+            if (settings.batterySaver) {
+              document.documentElement.classList.add("battery-saver");
+            } else {
+              document.documentElement.classList.remove("battery-saver");
+            }
+            // Apply User Persona
+            setUserName(settings.userName);
+            setUserDomain(settings.userDomain);
+          }}
         />
       </div>
     </div>

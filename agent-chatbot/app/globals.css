@@ -1,8 +1,24 @@
 @import "tailwindcss";
 
 :root {
+  --astra-accent: #a855f7;
+  --astra-accent-rgb: 168, 85, 247;
   --light-gradient: linear-gradient(315deg, #845fe2 0%, #dec9ff 100%);
   --purple-gradient: linear-gradient(315deg, #9f4ac9 0%, #7e4cc9 100%);
+}
+
+/* Battery Saver & Lite Mode overrides */
+html.battery-saver *,
+html.battery-saver *::before,
+html.battery-saver *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.battery-saver .orb-ambient-glow,
+html.battery-saver .animate-beam-spin {
+  display: none !important;
+  animation: none !important;
 }
 
 html.light,
@@ -283,10 +299,10 @@ html.dark .glass-card-theme {
   background: rgba(20, 14, 36, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(168, 85, 247, 0.32) !important;
+  border: 1px solid rgba(var(--astra-accent-rgb, 168, 85, 247), 0.35) !important;
   box-shadow: 
     0 12px 36px rgba(0, 0, 0, 0.55),
-    0 0 20px rgba(168, 85, 247, 0.08) !important;
+    0 0 24px rgba(var(--astra-accent-rgb, 168, 85, 247), 0.15) !important;
   color: #f5efff;
   position: relative;
   overflow: hidden;
@@ -403,14 +419,14 @@ html.light .orb-ambient-glow {
   background: radial-gradient(circle, #845fe2 0%, #dec9ff 65%, transparent 100%) !important;
 }
 html.dark .orb-ambient-glow {
-  background: radial-gradient(circle, #9f4ac9 0%, #7e4cc9 65%, transparent 100%) !important;
+  background: radial-gradient(circle, var(--astra-accent) 0%, rgba(var(--astra-accent-rgb, 159, 74, 201), 0.5) 50%, transparent 80%) !important;
 }
 
 html.light .aura-blob-1 { background-color: rgba(255, 255, 255, 0.2) !important; }
-html.dark .aura-blob-1 { background-color: rgba(159, 74, 201, 0.3) !important; }
+html.dark .aura-blob-1 { background-color: rgba(var(--astra-accent-rgb, 159, 74, 201), 0.25) !important; }
 
 html.light .aura-blob-2 { background-color: rgba(216, 180, 254, 0.25) !important; }
-html.dark .aura-blob-2 { background-color: rgba(126, 76, 201, 0.3) !important; }
+html.dark .aura-blob-2 { background-color: rgba(var(--astra-accent-rgb, 126, 76, 201), 0.25) !important; }
 
 html.light .aura-blob-3 { background-color: rgba(255, 255, 255, 0.15) !important; opacity: 0.2 !important; }
 html.dark .aura-blob-3 { background-image: linear-gradient(to right, rgba(147, 51, 234, 0.1), rgba(192, 38, 211, 0.1), rgba(79, 70, 229, 0.1)) !important; opacity: 0.3 !important; }
@@ -433,7 +449,7 @@ html.light .chip-glass-theme {
 }
 html.dark .chip-glass-theme {
   background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(168, 85, 247, 0.28) !important;
+  border: 1px solid rgba(var(--astra-accent-rgb, 168, 85, 247), 0.28) !important;
   color: #d4cbde !important;
   backdrop-filter: blur(10px);
 }
@@ -449,7 +465,7 @@ html.light .sidebar-search-input::placeholder {
 }
 html.dark .sidebar-search-input {
   background-color: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(168, 85, 247, 0.25) !important;
+  border: 1px solid rgba(var(--astra-accent-rgb, 168, 85, 247), 0.25) !important;
   color: #ffffff !important;
 }
 html.dark .sidebar-search-input::placeholder {
@@ -467,12 +483,12 @@ html.light .sidebar-newchat-btn:hover {
   background-color: #ffffff !important;
 }
 html.dark .sidebar-newchat-btn {
-  background-color: rgba(147, 51, 234, 0.18) !important;
-  border: 1px solid rgba(168, 85, 247, 0.35) !important;
+  background-color: rgba(var(--astra-accent-rgb, 168, 85, 247), 0.18) !important;
+  border: 1px solid rgba(var(--astra-accent-rgb, 168, 85, 247), 0.35) !important;
   color: #ffffff !important;
 }
 html.dark .sidebar-newchat-btn:hover {
-  background-color: rgba(147, 51, 234, 0.28) !important;
+  background-color: rgba(var(--astra-accent-rgb, 168, 85, 247), 0.28) !important;
 }
 
 /* ========================================================
@@ -521,16 +537,16 @@ html.dark .theme-toggle-btn {
   background: rgba(255, 255, 255, 0.06) !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(168, 85, 247, 0.32) !important;
+  border: 1px solid rgba(var(--astra-accent-rgb, 168, 85, 247), 0.32) !important;
   color: #fbbf24 !important;
   box-shadow: 
     0 4px 16px rgba(0, 0, 0, 0.4),
-    0 0 12px rgba(168, 85, 247, 0.12),
+    0 0 12px rgba(var(--astra-accent-rgb, 168, 85, 247), 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
 }
 html.dark .theme-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.12) !important;
-  border-color: rgba(168, 85, 247, 0.6) !important;
+  border-color: rgba(var(--astra-accent-rgb, 168, 85, 247), 0.6) !important;
   color: #fde047 !important;
   box-shadow: 
     0 6px 20px rgba(0, 0, 0, 0.5),
@@ -574,7 +590,7 @@ html.light .supervisor-text {
   font-weight: 600 !important;
 }
 html.dark .supervisor-text {
-  color: rgba(216, 180, 254, 0.6) !important;
+  color: rgba(var(--astra-accent-rgb, 168, 85, 247), 0.75) !important;
 }
 
 /* Prompt card bottom border divider */
@@ -582,7 +598,7 @@ html.light .prompt-bottom-border {
   border-color: rgba(255, 255, 255, 0.4) !important;
 }
 html.dark .prompt-bottom-border {
-  border-color: rgba(168, 85, 247, 0.22) !important;
+  border-color: rgba(var(--astra-accent-rgb, 168, 85, 247), 0.22) !important;
 }
 
 /* Open sidebar button in header */
@@ -593,7 +609,7 @@ html.light .header-open-btn {
   box-shadow: 0 2px 8px rgba(85, 45, 145, 0.08) !important;
 }
 html.dark .header-open-btn {
-  border: 1px solid rgba(168, 85, 247, 0.3) !important;
+  border: 1px solid rgba(var(--astra-accent-rgb, 168, 85, 247), 0.3) !important;
   background-color: rgba(255, 255, 255, 0.06) !important;
   color: #e5dff0 !important;
 }
@@ -620,18 +636,18 @@ html.dark #app-root {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Multi-Agent Squad (Purple / Violet) */
+/* Multi-Agent Squad (Accent / Dynamic Hue) */
 html.dark .feature-icon-purple {
-  background: rgba(168, 85, 247, 0.14);
-  border: 1px solid rgba(168, 85, 247, 0.32);
-  color: #d8b4fe;
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: rgba(var(--astra-accent-rgb, 168, 85, 247), 0.14);
+  border: 1px solid rgba(var(--astra-accent-rgb, 168, 85, 247), 0.32);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(var(--astra-accent-rgb, 168, 85, 247), 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 html.light .feature-icon-purple {
-  background: rgba(168, 85, 247, 0.14);
-  border: 1px solid rgba(147, 51, 234, 0.32);
-  color: #6b21a8;
-  box-shadow: 0 2px 6px rgba(147, 51, 234, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  background: rgba(var(--astra-accent-rgb, 168, 85, 247), 0.14);
+  border: 1px solid rgba(var(--astra-accent-rgb, 168, 85, 247), 0.32);
+  color: var(--astra-accent, #6b21a8);
+  box-shadow: 0 2px 6px rgba(var(--astra-accent-rgb, 168, 85, 247), 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 /* Fail-Safe Cascade (Amber / Gold) */
@@ -665,7 +681,7 @@ html.light .feature-icon-cyan {
 /* Smooth micro-glow on card hover */
 .glass-card-theme:hover .feature-icon-purple {
   transform: scale(1.06);
-  box-shadow: 0 0 16px rgba(168, 85, 247, 0.32);
+  box-shadow: 0 0 16px rgba(var(--astra-accent-rgb, 168, 85, 247), 0.32);
 }
 .glass-card-theme:hover .feature-icon-amber {
   transform: scale(1.06);
