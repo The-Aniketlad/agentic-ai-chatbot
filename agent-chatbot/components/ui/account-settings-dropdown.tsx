@@ -20,6 +20,7 @@ interface AccountSettingsDropdownProps {
   onOpenApiKeys?: () => void;
   onOpenResponseSettings?: () => void;
   onOpenPersonalization?: () => void;
+  onOpenShortcuts?: () => void;
 }
 
 export function AccountSettingsDropdown({
@@ -30,6 +31,7 @@ export function AccountSettingsDropdown({
   onOpenApiKeys,
   onOpenResponseSettings,
   onOpenPersonalization,
+  onOpenShortcuts,
 }: AccountSettingsDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -384,10 +386,15 @@ export function AccountSettingsDropdown({
               </div>
 
               {/* 4. Keyboard Shortcuts */}
-              <div
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenShortcuts) onOpenShortcuts();
+                  setIsOpen(false);
+                }}
                 onMouseEnter={() => keyboardIconRef.current?.startAnimation()}
                 onMouseLeave={() => keyboardIconRef.current?.stopAnimation()}
-                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-colors select-none cursor-default group/item ${
+                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-colors select-none cursor-pointer group/item text-left ${
                   isDark
                     ? "hover:bg-purple-900/30 text-purple-100"
                     : "hover:bg-purple-100/60 text-purple-950"
@@ -395,29 +402,32 @@ export function AccountSettingsDropdown({
               >
                 <div className="flex items-center gap-2.5">
                   <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover/item:scale-105 ${
-                      isDark ? "bg-purple-500/15 text-purple-300" : "bg-purple-100 text-purple-700"
-                    }`}
+                    style={{
+                      backgroundColor: `${accentColor}18`,
+                      borderColor: `${accentColor}30`,
+                    }}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border transition-transform duration-200 group-hover/item:scale-105"
                   >
                     <KeyboardIcon
                       ref={keyboardIconRef}
                       size={16}
                       duration={1}
-                      color={isDark ? "#c084fc" : "#7c3aed"}
+                      color={accentColor}
                     />
                   </div>
                   <span>Keyboard Shortcuts</span>
                 </div>
                 <span
-                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
-                    isDark
-                      ? "bg-purple-950/60 border-purple-500/30 text-purple-300"
-                      : "bg-purple-50 border-purple-200 text-purple-700"
-                  }`}
+                  style={{
+                    borderColor: `${accentColor}40`,
+                    color: accentColor,
+                    backgroundColor: `${accentColor}12`,
+                  }}
+                  className="text-[9px] font-mono px-1.5 py-0.5 rounded border"
                 >
                   ⌘K
                 </span>
-              </div>
+              </button>
             </div>
           </div>,
           document.body

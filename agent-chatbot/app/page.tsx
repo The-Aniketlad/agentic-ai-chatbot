@@ -23,6 +23,7 @@ import {
   PersonalizationModal,
   type FontDensity,
 } from "@/components/ui/personalization-modal";
+import { KeyboardShortcutsModal } from "@/components/ui/keyboard-shortcuts-modal";
 
 type Message = {
   role: "user" | "assistant";
@@ -149,6 +150,7 @@ export default function Home() {
   const [isApiKeysModalOpen, setIsApiKeysModalOpen] = useState(false);
   const [isResponseSettingsOpen, setIsResponseSettingsOpen] = useState(false);
   const [isPersonalizationModalOpen, setIsPersonalizationModalOpen] = useState(false);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [accentColor, setAccentColor] = useState<string>("#a855f7");
   const [fontDensity, setFontDensity] = useState<FontDensity>("default");
   const [userName, setUserName] = useState<string>("Aniket Lad");
@@ -324,6 +326,106 @@ export default function Home() {
       handleSubmit();
     }
   }
+
+  // Global Keyboard Shortcuts Listener (Industry Standard: Mac Cmd / Windows Ctrl)
+  useEffect(() => {
+    function handleGlobalKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
+
+      const isMac =
+        typeof window !== "undefined" &&
+        /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
+      const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+      // 1. Esc: Close active modals
+      if (e.key === "Escape") {
+        setIsShortcutsModalOpen(false);
+        setIsPersonalizationModalOpen(false);
+        setIsApiKeysModalOpen(false);
+        setIsResponseSettingsOpen(false);
+        setIsFileUploadOpen(false);
+        return;
+      }
+
+      // 2. Cmd/Ctrl + K: Toggle Keyboard Shortcuts Modal
+      if (modifier && (e.key.toLowerCase() === "k" || e.code === "KeyK") && !e.shiftKey) {
+        e.preventDefault();
+        setIsShortcutsModalOpen((prev) => !prev);
+        return;
+      }
+
+      // 3. Cmd/Ctrl + Shift + O: New Chat
+      if (modifier && e.shiftKey && (e.key.toLowerCase() === "o" || e.code === "KeyO")) {
+        e.preventDefault();
+        handleNewChat();
+        return;
+      }
+
+      // 4. Cmd/Ctrl + B: Toggle History Sidebar
+      if (modifier && !e.shiftKey && (e.key.toLowerCase() === "b" || e.code === "KeyB")) {
+        e.preventDefault();
+        setIsSidebarOpen((prev) => !prev);
+        return;
+      }
+
+      // 5. Cmd/Ctrl + Shift + D: Toggle Theme
+      if (modifier && e.shiftKey && (e.key.toLowerCase() === "d" || e.code === "KeyD")) {
+        e.preventDefault();
+        toggleTheme();
+        return;
+      }
+
+      // 6. Cmd/Ctrl + ,: Open Settings / Personalization
+      if (modifier && (e.key === "," || e.code === "Comma")) {
+        e.preventDefault();
+        setIsPersonalizationModalOpen(true);
+        return;
+      }
+
+      // 7. Cmd/Ctrl + U: Toggle File Attach & Upload
+      if (modifier && !e.shiftKey && (e.key.toLowerCase() === "u" || e.code === "KeyU")) {
+        e.preventDefault();
+        setIsFileUploadOpen((prev) => !prev);
+        return;
+      }
+
+      // 8. Cmd/Ctrl + Shift + K: Open Custom API Keys (BYOK)
+      if (modifier && e.shiftKey && (e.key.toLowerCase() === "k" || e.code === "KeyK")) {
+        e.preventDefault();
+        setIsApiKeysModalOpen(true);
+        return;
+      }
+
+      // 9. Cmd/Ctrl + Shift + T: Open AI Response Settings
+      if (modifier && e.shiftKey && (e.key.toLowerCase() === "t" || e.code === "KeyT")) {
+        e.preventDefault();
+        setIsResponseSettingsOpen(true);
+        return;
+      }
+
+      // 10. Standalone '/' (outside inputs) or Cmd/Ctrl + '/': Focus prompt bar
+      if (!isInput && e.key === "/" && !modifier && !e.shiftKey) {
+        e.preventDefault();
+        textareaRef.current?.focus();
+        return;
+      }
+      if (modifier && (e.key === "/" || e.code === "Slash")) {
+        e.preventDefault();
+        textareaRef.current?.focus();
+        return;
+      }
+    }
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleGlobalKeyDown);
+    };
+  }, [theme]);
 
   // STRICT: Only sends what the user physically typed in `input` (and file names if attached)!
   // No automated triggers from clicking attach files, zero token waste on upload.
@@ -575,6 +677,7 @@ export default function Home() {
             onOpenApiKeys={() => setIsApiKeysModalOpen(true)}
             onOpenResponseSettings={() => setIsResponseSettingsOpen(true)}
             onOpenPersonalization={() => setIsPersonalizationModalOpen(true)}
+            onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
           />
         </div>
       </aside>
@@ -1265,6 +1368,14 @@ export default function Home() {
             setUserName(settings.userName);
             setUserDomain(settings.userDomain);
           }}
+        />
+
+        {/* Keyboard Shortcuts (⌘K / Ctrl+K Cheat Sheet) Modal */}
+        <KeyboardShortcutsModal
+          isOpen={isShortcutsModalOpen}
+          onClose={() => setIsShortcutsModalOpen(false)}
+          isDark={isDark}
+          accentColor={accentColor}
         />
       </div>
     </div>
