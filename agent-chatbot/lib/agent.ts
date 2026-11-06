@@ -7,6 +7,11 @@ export type AgentResult = {
   provider: string;
   model: string;
   stepsTaken: number;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
 };
 
 export async function runAgent(
@@ -27,6 +32,9 @@ export async function runAgent(
   ];
 
   const MAX_STEPS = 5; // Safety limit: loop kabhi infinite na chale
+  let totalPromptTokens = 0;
+  let totalCompletionTokens = 0;
+  let totalTokens = 0;
 
   for (let step = 0; step < MAX_STEPS; step++) {
     console.log(`✦ Agent Loop: Step ${step + 1}/${MAX_STEPS}...`);
@@ -44,6 +52,12 @@ export async function runAgent(
       customOpenRouterKey,
       customAgentKey
     );
+
+    if (res.usage) {
+      totalPromptTokens += res.usage.prompt_tokens || 0;
+      totalCompletionTokens += res.usage.completion_tokens || 0;
+      totalTokens += res.usage.total_tokens || 0;
+    }
     const message = res.rawMessage;
 
     // 3. Agar model ne Tools call kiye hain:
@@ -81,6 +95,11 @@ export async function runAgent(
         provider: res.provider,
         model: res.model,
         stepsTaken: step + 1,
+        usage: {
+          promptTokens: totalPromptTokens,
+          completionTokens: totalCompletionTokens,
+          totalTokens: totalTokens,
+        },
       };
     }
   }
@@ -90,5 +109,10 @@ export async function runAgent(
     provider: "agent",
     model: "safety-limit",
     stepsTaken: MAX_STEPS,
+    usage: {
+      promptTokens: totalPromptTokens,
+      completionTokens: totalCompletionTokens,
+      totalTokens: totalTokens,
+    },
   };
 }

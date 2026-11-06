@@ -139,6 +139,15 @@ const SHORTCUTS_DATA: ShortcutItem[] = [
     winKeys: ["Ctrl", "Shift", "T"],
   },
   {
+    id: "token-usage",
+    title: "Agent Token Usage & Telemetry",
+    category: "Pro Controls",
+    description: "Inspect multi-agent quota, breakdown, and telemetry",
+    macKeys: ["⌘", "Shift", "A"],
+    winKeys: ["Ctrl", "Shift", "A"],
+    badge: "Telemetry",
+  },
+  {
     id: "clear-history",
     title: "Clear Current Chat History",
     category: "Pro Controls",

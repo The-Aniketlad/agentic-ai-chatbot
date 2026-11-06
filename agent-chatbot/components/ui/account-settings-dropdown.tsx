@@ -21,6 +21,7 @@ interface AccountSettingsDropdownProps {
   onOpenResponseSettings?: () => void;
   onOpenPersonalization?: () => void;
   onOpenShortcuts?: () => void;
+  onOpenUsage?: () => void;
 }
 
 export function AccountSettingsDropdown({
@@ -32,6 +33,7 @@ export function AccountSettingsDropdown({
   onOpenResponseSettings,
   onOpenPersonalization,
   onOpenShortcuts,
+  onOpenUsage,
 }: AccountSettingsDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -385,7 +387,61 @@ export function AccountSettingsDropdown({
                 System
               </div>
 
-              {/* 4. Keyboard Shortcuts */}
+              {/* 4. Agent Token Usage */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenUsage) onOpenUsage();
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-colors select-none cursor-pointer group/item text-left ${
+                  isDark
+                    ? "hover:bg-purple-900/30 text-purple-100"
+                    : "hover:bg-purple-100/60 text-purple-950"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div
+                    style={{
+                      backgroundColor: `${accentColor}18`,
+                      borderColor: `${accentColor}30`,
+                    }}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border transition-transform duration-200 group-hover/item:scale-105"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={accentColor}
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 2v4" />
+                      <path d="m4.93 10.93 2.83 2.83" />
+                      <path d="M2 18h4" />
+                      <path d="M20 18h2" />
+                      <path d="m19.07 10.93-2.83 2.83" />
+                      <path d="M22 22H2" />
+                      <path d="m16 16-4-4" />
+                      <circle cx="12" cy="12" r="2" />
+                    </svg>
+                  </div>
+                  <span>Agent Token Usage</span>
+                </div>
+                <span
+                  style={{
+                    borderColor: `${accentColor}40`,
+                    color: accentColor,
+                    backgroundColor: `${accentColor}12`,
+                  }}
+                  className="text-[9px] font-mono px-1.5 py-0.5 rounded border"
+                >
+                  Telemetry
+                </span>
+              </button>
+
+              {/* 5. Keyboard Shortcuts */}
               <button
                 type="button"
                 onClick={() => {

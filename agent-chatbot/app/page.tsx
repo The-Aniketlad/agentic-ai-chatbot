@@ -24,12 +24,41 @@ import {
   type FontDensity,
 } from "@/components/ui/personalization-modal";
 import { KeyboardShortcutsModal } from "@/components/ui/keyboard-shortcuts-modal";
+import { TokenUsageBadge } from "@/components/ui/token-usage-badge";
+import {
+  AgentUsageModal,
+  DEFAULT_TELEMETRY,
+  createDefaultTelemetry,
+  checkAndResetDailyTelemetry,
+  type AgentTelemetryData,
+} from "@/components/ui/agent-usage-modal";
+import { PromptAttachments } from "@/components/ui/prompt-attachments";
+import {
+  MessageAttachments,
+  type MessageAttachmentMeta,
+} from "@/components/ui/message-attachments";
+import { AgentThinking } from "@/components/application/agent-thinking/agent-thinking";
+import {
+  ChatHistorySkeleton,
+  SidebarSessionSkeleton,
+} from "@/components/ui/skeleton";
+import { ChatContextMenu } from "@/components/ui/chat-context-menu";
 
-type Message = {
+export type Message = {
   role: "user" | "assistant";
   content: string;
   agentTitle?: string;
+  attachments?: MessageAttachmentMeta[];
 };
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  messages: Message[];
+  createdAt: number;
+  updatedAt: number;
+  isPinned?: boolean;
+}
 
 function hexToRgb(hex: string): string {
   const cleanHex = hex.replace("#", "");
@@ -135,9 +164,24 @@ const FOCUS_AGENTS_CONFIG = {
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const activeSessionIdRef = useRef<string | null>(null);
+  activeSessionIdRef.current = activeSessionId;
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSessionLoading, setIsSessionLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const isMountedRef = useRef(false);
+  const isHydratingRef = useRef(true);
+  const [contextMenu, setContextMenu] = useState<{
+    sessionId: string;
+    x: number;
+    y: number;
+    isPinned: boolean;
+  } | null>(null);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [greeting, setGreeting] = useState("Good Afternoon");
@@ -151,6 +195,8 @@ export default function Home() {
   const [isResponseSettingsOpen, setIsResponseSettingsOpen] = useState(false);
   const [isPersonalizationModalOpen, setIsPersonalizationModalOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
+  const [isAgentUsageModalOpen, setIsAgentUsageModalOpen] = useState(false);
+  const [telemetryData, setTelemetryData] = useState<AgentTelemetryData>(DEFAULT_TELEMETRY);
   const [accentColor, setAccentColor] = useState<string>("#a855f7");
   const [fontDensity, setFontDensity] = useState<FontDensity>("default");
   const [userName, setUserName] = useState<string>("Aniket Lad");
@@ -168,17 +214,210 @@ export default function Home() {
   const toolsIconRef = useRef<WrenchIconHandle>(null);
   const heroSendIconRef = useRef<ArrowUpIconHandle>(null);
   const footerSendIconRef = useRef<ArrowUpIconHandle>(null);
+  const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Handle adding new files (pure local state, ZERO token consumption)
-  function handleFilesChange(newFiles: File[]) {
-    const formattedFiles: UploadedFile[] = newFiles.map((file) => ({
-      id: `${file.name}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      file,
-      progress: 0,
-      status: "uploading",
-    }));
+  // Handle adding new files and auto-extracting text & previews (PDFs, docs, images, code)
+  async function handleFilesChange(newFiles: File[]) {
+    const formattedFiles: UploadedFile[] = newFiles.map((file) => {
+      const isImg = file.type.startsWith("image/");
+      const isPdf = file.type === "application/pdf" || file.name.endsWith(".pdf");
+      const kind = isImg ? "image" : isPdf ? "pdf" : "document";
+      return {
+        id: `${file.name}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        file,
+        progress: 30,
+        status: "uploading",
+        kind,
+      };
+    });
 
     setAttachedFiles((prev) => [...prev, ...formattedFiles]);
+
+    // Process each file asynchronously so text and thumbnails are ready
+    for (const item of formattedFiles) {
+      const file = item.file;
+      try {
+        if (file.type.startsWith("image/")) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const dataUrl = e.target?.result as string;
+            setAttachedFiles((prev) =>
+              prev.map((f) =>
+                f.id === item.id
+                  ? {
+                      ...f,
+                      progress: 100,
+                      status: "completed",
+                      dataUrl,
+                      extractedText: `[Image File: "${file.name}" (${(file.size / 1024).toFixed(1)} KB)]`,
+                    }
+                  : f
+              )
+            );
+          };
+          reader.readAsDataURL(file);
+        } else if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+          const formData = new FormData();
+          formData.append("file", file);
+          const res = await fetch("/api/parse-document", {
+            method: "POST",
+            body: formData,
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setAttachedFiles((prev) =>
+              prev.map((f) =>
+                f.id === item.id
+                  ? {
+                      ...f,
+                      progress: 100,
+                      status: "completed",
+                      extractedText: data.text,
+                      kind: "pdf",
+                    }
+                  : f
+              )
+            );
+          } else {
+            throw new Error("Failed to parse PDF document");
+          }
+        } else {
+          // Plain text / code / csv / markdown
+          const text = await file.text();
+          setAttachedFiles((prev) =>
+            prev.map((f) =>
+              f.id === item.id
+                ? {
+                    ...f,
+                    progress: 100,
+                    status: "completed",
+                    extractedText: text,
+                    kind: "document",
+                  }
+                : f
+            )
+          );
+        }
+      } catch (err) {
+        console.warn("File processing error:", err);
+        setAttachedFiles((prev) =>
+          prev.map((f) =>
+            f.id === item.id
+              ? {
+                  ...f,
+                  progress: 100,
+                  status: "completed",
+                  extractedText: `[Attached Document: "${file.name}"]`,
+                }
+              : f
+          )
+        );
+      }
+    }
+  }
+
+  // Typewriter effect for prompt bar suggestion chips (Only inputs to prompt bar, does not send)
+  function handleChipClick(promptText: string, focusAgent?: "researcher" | "coder" | "summarizer") {
+    if (focusAgent) {
+      setActiveFocusAgent(focusAgent);
+    }
+    if (typingTimerRef.current) {
+      clearInterval(typingTimerRef.current);
+    }
+
+    let i = 0;
+    setInput("");
+    typingTimerRef.current = setInterval(() => {
+      i++;
+      setInput(promptText.slice(0, i));
+      if (i >= promptText.length) {
+        if (typingTimerRef.current) clearInterval(typingTimerRef.current);
+        textareaRef.current?.focus();
+      }
+    }, 15);
+  }
+
+  function handleSelectSession(session: ChatSession) {
+    if (activeSessionId === session.id) return;
+    setIsSessionLoading(true);
+    activeSessionIdRef.current = session.id;
+    setActiveSessionId(session.id);
+    setMessages(session.messages);
+    setInput("");
+    setAttachedFiles([]);
+    setIsFileUploadOpen(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("astra_active_session_id", session.id);
+      localStorage.setItem("astra_chat_history", JSON.stringify(session.messages));
+      if (window.innerWidth < 768) {
+        setIsSidebarOpen(false);
+      }
+    }
+    setTimeout(() => {
+      setIsSessionLoading(false);
+    }, 220);
+  }
+
+  function handleDeleteSession(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
+    setSessions((prev) => {
+      const remaining = prev.filter((s) => s.id !== id);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("astra_chat_sessions", JSON.stringify(remaining));
+      }
+      return remaining;
+    });
+    if (activeSessionId === id || activeSessionIdRef.current === id) {
+      activeSessionIdRef.current = null;
+      setActiveSessionId(null);
+      setMessages([]);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("astra_active_session_id", "new");
+        localStorage.removeItem("astra_chat_history");
+      }
+    }
+  }
+
+  function handleTogglePin(id: string) {
+    setSessions((prev) => {
+      const updated = prev.map((s) => (s.id === id ? { ...s, isPinned: !s.isPinned } : s));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("astra_chat_sessions", JSON.stringify(updated));
+      }
+      return updated;
+    });
+  }
+
+  function handleStartRename(session: ChatSession) {
+    setEditingSessionId(session.id);
+    setEditingTitle(session.title);
+  }
+
+  function handleSaveRename(id: string) {
+    if (!editingTitle.trim()) {
+      setEditingSessionId(null);
+      return;
+    }
+    setSessions((prev) => {
+      const updated = prev.map((s) => (s.id === id ? { ...s, title: editingTitle.trim() } : s));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("astra_chat_sessions", JSON.stringify(updated));
+      }
+      return updated;
+    });
+    setEditingSessionId(null);
+  }
+
+  function handleClearAllSessions() {
+    setSessions([]);
+    setActiveSessionId(null);
+    activeSessionIdRef.current = null;
+    setMessages([]);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("astra_chat_sessions");
+      localStorage.removeItem("astra_chat_history");
+      localStorage.setItem("astra_active_session_id", "new");
+    }
   }
 
   // Smooth progress animation simulation (0% -> 100%)
@@ -209,9 +448,38 @@ export default function Home() {
     setAttachedFiles((prev) => prev.filter((f) => f.id !== id));
   }
 
+  function handleResetTelemetry() {
+    const resetData = createDefaultTelemetry();
+    setTelemetryData(resetData);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("astra_agent_telemetry", JSON.stringify(resetData));
+    }
+  }
+
+  async function handleRefreshTelemetry() {
+    try {
+      const res = await fetch("/api/telemetry", { cache: "no-store" });
+      const data = await res.json();
+
+      setTelemetryData((prev) => {
+        const { data: verified } = checkAndResetDailyTelemetry(prev);
+        if (data && data.success && data.openrouter && data.openrouter.used === 0) {
+          verified.providers.openrouter = 0;
+        }
+        if (typeof window !== "undefined") {
+          localStorage.setItem("astra_agent_telemetry", JSON.stringify(verified));
+        }
+        return { ...verified };
+      });
+    } catch (err) {
+      console.warn("Failed to refresh telemetry from API:", err);
+    }
+  }
+
   // 1. Mount: Hydrate client preferences cleanly without hydration mismatch
   useEffect(() => {
     isMountedRef.current = true;
+    setIsMounted(true);
 
     // Trigger welcoming bot animation shortly after mount
     const botTimer = setTimeout(() => {
@@ -258,28 +526,198 @@ export default function Home() {
     const storedCustomAgentKey = localStorage.getItem("astra_custom_agent_key");
     setHasCustomAgentKey(Boolean(storedCustomAgentKey && storedCustomAgentKey.trim()));
 
-    // Restore chat history
-    const savedHistory = localStorage.getItem("astra_chat_history");
-    if (savedHistory) {
+    // Restore Chat Sessions (with automatic deduplication of duplicate sessions)
+    const savedSessions = localStorage.getItem("astra_chat_sessions");
+    const savedActiveId = localStorage.getItem("astra_active_session_id");
+
+    if (savedSessions) {
       try {
-        const parsed = JSON.parse(savedHistory);
+        const parsed = JSON.parse(savedSessions);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          requestAnimationFrame(() => setMessages(parsed));
+          // De-duplicate duplicate sessions that have identical content
+          const uniqueSessions: ChatSession[] = [];
+          const seenFingerprints = new Set<string>();
+
+          for (const s of parsed) {
+            if (!s || !s.id) continue;
+            const firstMsg = s.messages?.find((m: Message) => m.role === "user")?.content || "";
+            const fingerprint = `${s.title}__${s.messages?.length || 0}__${firstMsg.slice(0, 80)}`;
+            if (!seenFingerprints.has(fingerprint)) {
+              seenFingerprints.add(fingerprint);
+              uniqueSessions.push(s);
+            }
+          }
+
+          const cleanedList = uniqueSessions.length > 0 ? uniqueSessions : parsed;
+          setSessions(cleanedList);
+
+          // Respect user state on refresh: if user was in New Chat, DO NOT force-load old chats!
+          if (savedActiveId === "new" || savedActiveId === null || savedActiveId === "") {
+            activeSessionIdRef.current = null;
+            setActiveSessionId(null);
+            setMessages([]);
+          } else {
+            const activeSession = cleanedList.find((s) => s.id === savedActiveId);
+            if (activeSession) {
+              activeSessionIdRef.current = activeSession.id;
+              setActiveSessionId(activeSession.id);
+              setMessages(activeSession.messages || []);
+            } else {
+              // Target session was not found, stay on fresh New Chat
+              activeSessionIdRef.current = null;
+              setActiveSessionId(null);
+              setMessages([]);
+            }
+          }
+
+          if (cleanedList.length !== parsed.length) {
+            localStorage.setItem("astra_chat_sessions", JSON.stringify(cleanedList));
+          }
         }
       } catch (err) {
-        console.error("Failed to restore history:", err);
+        console.error("Failed to restore sessions:", err);
+      }
+    } else {
+      // Migrate legacy astra_chat_history if available and user didn't request New Chat
+      if (savedActiveId !== "new") {
+        const savedHistory = localStorage.getItem("astra_chat_history");
+        if (savedHistory) {
+          try {
+            const parsed = JSON.parse(savedHistory);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              const initialSession: ChatSession = {
+                id: `session_${Date.now()}`,
+                title: parsed.find((m: Message) => m.role === "user")?.content.slice(0, 32) || "Active Conversation",
+                messages: parsed,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              };
+              setSessions([initialSession]);
+              activeSessionIdRef.current = initialSession.id;
+              setActiveSessionId(initialSession.id);
+              setMessages(parsed);
+              localStorage.setItem("astra_chat_sessions", JSON.stringify([initialSession]));
+              localStorage.setItem("astra_active_session_id", initialSession.id);
+            }
+          } catch (err) {
+            console.error("Failed to restore history:", err);
+          }
+        }
       }
     }
 
-    return () => clearTimeout(botTimer);
+    // Release hydration lock after initial state stabilizes
+    const hydrationTimer = setTimeout(() => {
+      isHydratingRef.current = false;
+    }, 200);
+
+    // Restore Agent Telemetry with daily auto-refresh (resets to 100% on new day or after break)
+    const savedTelemetry = localStorage.getItem("astra_agent_telemetry");
+    let currentTelemetryData: AgentTelemetryData | null = null;
+    if (savedTelemetry) {
+      try {
+        const parsed = JSON.parse(savedTelemetry);
+        if (parsed && typeof parsed.totalTokensUsed === "number") {
+          // If browser has old hardcoded 57240 mock data, purge it so user sees real 100% available
+          if (parsed.totalTokensUsed === 57240) {
+            currentTelemetryData = null;
+          } else {
+            currentTelemetryData = parsed;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to restore telemetry:", err);
+      }
+    }
+
+    // Auto-check 00:00 UTC rollover:
+    // If user returns after days/weeks or on a new calendar day, this automatically resets to 100% full quota!
+    const { data: verifiedTelemetry, wasReset } = checkAndResetDailyTelemetry(currentTelemetryData);
+    setTelemetryData(verifiedTelemetry);
+    localStorage.setItem("astra_agent_telemetry", JSON.stringify(verifiedTelemetry));
+    if (wasReset) {
+      console.log("✦ Daily Token Quota automatically refreshed to 100% for UTC date:", verifiedTelemetry.lastResetDate);
+    }
+
+    // Periodic UTC rollover check (every 30 seconds) + on window focus (e.g. user resumes tab next morning)
+    function verifyUtcMidnightRollover() {
+      setTelemetryData((prev) => {
+        const { data: checked, wasReset: didReset } = checkAndResetDailyTelemetry(prev);
+        if (didReset) {
+          localStorage.setItem("astra_agent_telemetry", JSON.stringify(checked));
+          console.log("✦ Daily Token Quota automatically refreshed to 100% for new UTC date:", checked.lastResetDate);
+        }
+        return didReset ? checked : prev;
+      });
+    }
+
+    const rolloverInterval = setInterval(verifyUtcMidnightRollover, 30000);
+    window.addEventListener("focus", verifyUtcMidnightRollover);
+
+    // Verify live provider telemetry
+    fetch("/api/telemetry")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.success && data.openrouter) {
+          console.log("✦ Real-time provider telemetry verified:", data.openrouter);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      clearTimeout(botTimer);
+      clearTimeout(hydrationTimer);
+      clearInterval(rolloverInterval);
+      window.removeEventListener("focus", verifyUtcMidnightRollover);
+    };
   }, []);
 
-  // 2. Persist chat history and auto-scroll
+  // 2. Persist chat history, active session, and auto-scroll
   useEffect(() => {
-    if (isMountedRef.current && messages.length > 0) {
-      localStorage.setItem("astra_chat_history", JSON.stringify(messages));
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
+    if (isHydratingRef.current || !isMountedRef.current || messages.length === 0) return;
+
+    localStorage.setItem("astra_chat_history", JSON.stringify(messages));
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+
+    // Auto-sync current conversation thread into sessions list and localStorage
+    setSessions((prev) => {
+      const currentId = activeSessionIdRef.current;
+      if (!currentId) return prev; // Do NOT generate unlinked sessions on arbitrary message updates
+
+      const firstUserMsg = messages.find((m) => m.role === "user")?.content || "Conversation";
+      const title = firstUserMsg.slice(0, 36) || "New Conversation";
+
+      const exists = prev.some((s) => s.id === currentId);
+      let updatedList: ChatSession[];
+      if (exists) {
+        updatedList = prev.map((s) =>
+          s.id === currentId
+            ? {
+                ...s,
+                messages,
+                updatedAt: Date.now(),
+                title: s.title === "New Conversation" ? title : s.title,
+              }
+            : s
+        );
+      } else {
+        updatedList = [
+          {
+            id: currentId,
+            title,
+            messages,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          },
+          ...prev,
+        ];
+      }
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("astra_chat_sessions", JSON.stringify(updatedList));
+      }
+      return updatedList;
+    });
   }, [messages]);
 
   // 3. Theme application helper
@@ -305,11 +743,18 @@ export default function Home() {
     applyTheme(nextTheme);
   }
 
-  // 4. Start fresh conversation (Local UI reset only, NEVER calls LLM)
+  // 4. Start fresh conversation (Safely keeps previous sessions intact in sidebar!)
   function handleNewChat() {
+    activeSessionIdRef.current = null;
+    setActiveSessionId(null);
     setMessages([]);
-    localStorage.removeItem("astra_chat_history");
     setInput("");
+    setAttachedFiles([]);
+    setIsFileUploadOpen(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("astra_active_session_id", "new");
+      localStorage.removeItem("astra_chat_history");
+    }
   }
 
   // Auto-resize textarea as user types
@@ -349,6 +794,7 @@ export default function Home() {
         setIsApiKeysModalOpen(false);
         setIsResponseSettingsOpen(false);
         setIsFileUploadOpen(false);
+        setIsAgentUsageModalOpen(false);
         return;
       }
 
@@ -408,6 +854,13 @@ export default function Home() {
         return;
       }
 
+      // 10. Cmd/Ctrl + Shift + A: Open Agent Token Usage & Telemetry
+      if (modifier && e.shiftKey && (e.key.toLowerCase() === "a" || e.code === "KeyA")) {
+        e.preventDefault();
+        setIsAgentUsageModalOpen((prev) => !prev);
+        return;
+      }
+
       // 10. Standalone '/' (outside inputs) or Cmd/Ctrl + '/': Focus prompt bar
       if (!isInput && e.key === "/" && !modifier && !e.shiftKey) {
         e.preventDefault();
@@ -427,40 +880,80 @@ export default function Home() {
     };
   }, [theme]);
 
-  // STRICT: Only sends what the user physically typed in `input` (and file names if attached)!
-  // No automated triggers from clicking attach files, zero token waste on upload.
+  // STRICT: Sends user's typed prompt + extracted document contents to LLM
   async function handleSubmit() {
     let promptToSend = input.trim();
     if (!promptToSend && attachedFiles.length === 0) return;
     if (isLoading) return;
 
-    if (attachedFiles.length > 0) {
-      const fileNames = attachedFiles.map((f) => f.file.name).join(", ");
-      promptToSend = promptToSend
-        ? `${promptToSend}\n\n[Attached File(s): ${fileNames}]`
-        : `[Attached File(s): ${fileNames}] Please analyze these documents.`;
-      setAttachedFiles([]);
-      setIsFileUploadOpen(false);
+    // Convert attached files into structured MessageAttachmentMeta
+    const currentAttachments: MessageAttachmentMeta[] = attachedFiles.map((f) => ({
+      id: f.id,
+      name: f.file.name,
+      size: f.file.size,
+      type: f.file.type,
+      kind: (f.kind as any) || "document",
+      dataUrl: f.dataUrl,
+      extractedText: f.extractedText,
+    }));
+
+    // If attachments have extracted text, build comprehensive LLM document context
+    let llmPrompt = promptToSend;
+    if (currentAttachments.length > 0) {
+      const docTexts = currentAttachments
+        .filter((a) => a.extractedText && a.extractedText.trim())
+        .map(
+          (a) =>
+            `[DOCUMENT ATTACHMENT: "${a.name}" (${(a.size / 1024).toFixed(1)} KB)]\n${a.extractedText}\n[END OF DOCUMENT]`
+        )
+        .join("\n\n");
+
+      if (docTexts) {
+        llmPrompt = promptToSend
+          ? `${promptToSend}\n\n--- ATTACHED DOCUMENTS ---\n${docTexts}\n--- END OF ATTACHMENTS ---`
+          : `Please analyze the attached document:\n\n${docTexts}`;
+      }
     }
+
+    setAttachedFiles([]);
+    setIsFileUploadOpen(false);
 
     setInput("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
 
+    // Ensure an active session ID exists for this conversation
+    let currentSessionId = activeSessionIdRef.current;
+    if (!currentSessionId) {
+      currentSessionId = `session_${Date.now()}`;
+      activeSessionIdRef.current = currentSessionId;
+      setActiveSessionId(currentSessionId);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("astra_active_session_id", currentSessionId);
+      }
+    }
+
     const newMessages: Message[] = [
       ...messages,
-      { role: "user", content: promptToSend },
+      {
+        role: "user",
+        content: promptToSend || (currentAttachments.length > 0 ? "Attached document for analysis" : ""),
+        attachments: currentAttachments.length > 0 ? currentAttachments : undefined,
+      },
     ];
 
     setMessages(newMessages);
     setIsLoading(true);
 
     try {
-      const apiMessages = newMessages.map(({ role, content }) => ({
-        role,
-        content,
-      }));
+      const apiMessages = newMessages.map((m, idx) => {
+        // Active turn sends expanded prompt with full document text
+        if (idx === newMessages.length - 1 && m.role === "user") {
+          return { role: m.role, content: llmPrompt };
+        }
+        return { role: m.role, content: m.content };
+      });
 
       const customGroqKey = typeof window !== "undefined" ? localStorage.getItem("astra_custom_groq_key") || undefined : undefined;
       const customOpenRouterKey = typeof window !== "undefined" ? localStorage.getItem("astra_custom_openrouter_key") || undefined : undefined;
@@ -493,6 +986,58 @@ export default function Home() {
       }
 
       const agentTitle = res.headers.get("X-Agent-Title") || undefined;
+      const rawTotalTokens = parseInt(res.headers.get("X-Total-Tokens") || "0", 10);
+      const respProvider = res.headers.get("X-Provider") || selectedProvider;
+      const respAgent = res.headers.get("X-Agent") || "";
+
+      // Fallback estimate if API response didn't supply usage (e.g. mock or fast route)
+      const estimatedPromptTokens = Math.max(1, Math.ceil(promptToSend.length / 4));
+      const effectiveTotalTokens = rawTotalTokens > 0 ? rawTotalTokens : (estimatedPromptTokens + 120);
+
+      setTelemetryData((prev) => {
+        // Guarantee daily quota is refreshed if UTC day crossed before adding new tokens
+        const { data: baseTelemetry } = checkAndResetDailyTelemetry(prev);
+
+        let agentKey: "coder" | "researcher" | "summarizer" | "supervisor" = "supervisor";
+        if (activeFocusAgent) {
+          agentKey = activeFocusAgent;
+        } else if (respAgent.toLowerCase().includes("engineer") || respAgent.toLowerCase().includes("coder")) {
+          agentKey = "coder";
+        } else if (respAgent.toLowerCase().includes("research")) {
+          agentKey = "researcher";
+        } else if (respAgent.toLowerCase().includes("summar")) {
+          agentKey = "summarizer";
+        }
+
+        let providerKey: "groq" | "openrouter" | "custom" = "groq";
+        if (respProvider === "openrouter") providerKey = "openrouter";
+        else if (respProvider === "custom") providerKey = "custom";
+
+        const currentAgent = baseTelemetry.agents[agentKey] || { tokens: 0, prompts: 0, name: agentKey };
+        const updated: AgentTelemetryData = {
+          ...baseTelemetry,
+          totalTokensUsed: baseTelemetry.totalTokensUsed + effectiveTotalTokens,
+          promptsCount: baseTelemetry.promptsCount + 1,
+          agents: {
+            ...baseTelemetry.agents,
+            [agentKey]: {
+              ...currentAgent,
+              tokens: currentAgent.tokens + effectiveTotalTokens,
+              prompts: currentAgent.prompts + 1,
+            },
+          },
+          providers: {
+            ...baseTelemetry.providers,
+            [providerKey]: (baseTelemetry.providers[providerKey] || 0) + effectiveTotalTokens,
+          },
+        };
+
+        if (typeof window !== "undefined") {
+          localStorage.setItem("astra_agent_telemetry", JSON.stringify(updated));
+        }
+
+        return updated;
+      });
 
       // Add empty assistant response to stream into
       setMessages((prev) => [
@@ -636,34 +1181,139 @@ export default function Home() {
           </div>
 
           {/* Recent Sessions List */}
-          <div className="flex flex-col space-y-1.5 pt-3">
-            <div className="flex items-center justify-between px-2 select-none min-h-[22px]">
+          <div className="flex flex-col space-y-1 pt-3 flex-1 overflow-y-auto max-h-[calc(100vh-320px)] no-scrollbar">
+            <div className="flex items-center justify-between px-2 select-none min-h-[22px] mb-1">
               <span className="text-[10px] font-bold tracking-wider uppercase opacity-50">
-                Recent Sessions
+                Recent Sessions {sessions.length > 0 && `(${sessions.length})`}
               </span>
-              {messages.length > 0 && (
-                <ClearHistoryDropdown onClearAll={handleNewChat} isDark={isDark} />
+              {sessions.length > 0 && (
+                <ClearHistoryDropdown onClearAll={handleClearAllSessions} isDark={isDark} />
               )}
             </div>
 
-            <div
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium select-none cursor-default border ${
-                messages.length > 0
-                  ? isDark
-                    ? "bg-purple-500/15 border-purple-500/30 text-white"
-                    : "bg-white/75 border-white text-[#180f2d] shadow-xs"
-                  : "border-transparent opacity-60"
-              }`}
-            >
-              <svg className="w-3.5 h-3.5 flex-shrink-0 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              <span className="truncate">
-                {messages.length > 0
-                  ? messages.find((m) => m.role === "user")?.content || "Active Session"
-                  : "No conversation yet"}
-              </span>
-            </div>
+            {!isMounted ? (
+              <SidebarSessionSkeleton />
+            ) : sessions.filter((s) => !searchFilter || s.title.toLowerCase().includes(searchFilter.toLowerCase())).length === 0 ? (
+              <div className="px-3 py-2 text-xs opacity-50 select-none flex items-center gap-2">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                <span>No conversation yet</span>
+              </div>
+            ) : (
+              sessions
+                .filter((s) => !searchFilter || s.title.toLowerCase().includes(searchFilter.toLowerCase()))
+                .sort((a, b) => {
+                  if (a.isPinned && !b.isPinned) return -1;
+                  if (!a.isPinned && b.isPinned) return 1;
+                  return (b.updatedAt || 0) - (a.updatedAt || 0);
+                })
+                .map((session) => {
+                  const isActive = activeSessionId === session.id;
+                  return (
+                    <div
+                      key={session.id}
+                      onClick={() => handleSelectSession(session)}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setContextMenu({
+                          sessionId: session.id,
+                          x: e.clientX,
+                          y: e.clientY,
+                          isPinned: Boolean(session.isPinned),
+                        });
+                      }}
+                      className={`group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all duration-150 border ${
+                        isActive
+                          ? isDark
+                            ? "bg-purple-500/20 border-purple-500/40 text-white shadow-xs"
+                            : "bg-white border-purple-300 text-purple-950 shadow-xs font-semibold"
+                          : isDark
+                          ? "border-transparent hover:bg-white/5 text-purple-200/70 hover:text-white"
+                          : "border-transparent hover:bg-purple-100/60 text-purple-900/70 hover:text-purple-950"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1 mr-1.5">
+                        {session.isPinned ? (
+                          <svg
+                            className="w-3.5 h-3.5 shrink-0 animate-in fade-in-0 duration-200"
+                            style={{ color: accentColor }}
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <title>Pinned chat</title>
+                            <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v2a2 2 0 01-.586 1.414L16 11v6l2 2v1H6v-1l2-2v-6L5.586 8.414A2 2 0 015 7V5z" />
+                          </svg>
+                        ) : (
+                          <svg
+                            className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-purple-400" : "opacity-50"}`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                        )}
+
+                        {editingSessionId === session.id ? (
+                          <input
+                            type="text"
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveRename(session.id);
+                              if (e.key === "Escape") setEditingSessionId(null);
+                            }}
+                            onBlur={() => handleSaveRename(session.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            autoFocus
+                            className="w-full bg-white/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-xs outline-none border border-purple-400/50 text-white"
+                          />
+                        ) : (
+                          <span className="truncate">{session.title}</span>
+                        )}
+                      </div>
+
+                      {/* Right-hand Action Buttons: 3-dots Menu + Quick Trash */}
+                      <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setContextMenu({
+                              sessionId: session.id,
+                              x: rect.right + 4,
+                              y: rect.top,
+                              isPinned: Boolean(session.isPinned),
+                            });
+                          }}
+                          className="opacity-0 group-hover:opacity-70 hover:!opacity-100 p-1 rounded-md transition-opacity cursor-pointer hover:bg-white/10"
+                          title="More options (Pin, Rename, Delete)"
+                        >
+                          <svg className="w-3.5 h-3.5 opacity-80" fill="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="5" r="1.5" />
+                            <circle cx="12" cy="12" r="1.5" />
+                            <circle cx="12" cy="19" r="1.5" />
+                          </svg>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteSession(e, session.id)}
+                          className="opacity-0 group-hover:opacity-60 hover:!opacity-100 p-1 rounded-md transition-opacity cursor-pointer shrink-0 hover:bg-red-500/10"
+                          title="Delete chat"
+                        >
+                          <svg className="w-3.5 h-3.5 text-red-400 hover:text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+            )}
           </div>
         </div>
 
@@ -678,6 +1328,7 @@ export default function Home() {
             onOpenResponseSettings={() => setIsResponseSettingsOpen(true)}
             onOpenPersonalization={() => setIsPersonalizationModalOpen(true)}
             onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
+            onOpenUsage={() => setIsAgentUsageModalOpen(true)}
           />
         </div>
       </aside>
@@ -762,7 +1413,13 @@ export default function Home() {
         </header>
 
         {/* 3. Messages Feed OR Axora-Style Centered Hero Screen */}
-        <div className="flex-1 overflow-y-auto px-4 md:px-6 no-scrollbar flex flex-col">
+        <div
+          className={`flex-1 px-4 md:px-6 flex flex-col ${
+            messages.length === 0
+              ? "overflow-hidden no-scrollbar"
+              : "overflow-y-auto chat-scrollbar"
+          }`}
+        >
           {messages.length === 0 ? (
             /* STATE A: Centered Hero Screen (Orb + Dynamic Greeting + Floating Search Bar + 3 Feature Cards) */
             <div className="flex flex-col items-center justify-center my-auto w-full max-w-3xl mx-auto px-2 py-4 md:py-6">
@@ -795,12 +1452,9 @@ export default function Home() {
 
               {/* Lower Section: Pure Floating Search Bar + 3 Feature Cards Directly Beneath It */}
               <div className="w-full pb-4 md:pb-8">
-                {/* 1. Pure Floating Glassmorphic Search Bar (No background rectangle) */}
-                <div
-                  className={`w-full rounded-[22px] p-3 md:p-3.5 transition-all mb-3 ${promptCardBg}`}
-                >
-                  {/* Top Action Row (Dynamic Focus Agent Indicator) */}
-                  <div className="flex items-center gap-2 mb-1.5 select-none transition-all duration-200">
+                {/* Small Header Container ABOVE Prompt Bar (Focus Agent on left, Token Usage Badge on right) */}
+                <div className="flex items-center justify-between px-2 mb-2 select-none w-full">
+                  <div className="flex items-center gap-2">
                     {activeFocusAgent ? (
                       <>
                         <div
@@ -840,7 +1494,7 @@ export default function Home() {
                     ) : (
                       <>
                         <div
-                          className={`inline-flex items-center gap-1.5 h-5 px-2 rounded-full text-xs font-medium cursor-default ${chipGlass}`}
+                          className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-xs font-medium cursor-default ${chipGlass}`}
                         >
                           <AtSignIcon />
                           <span className="text-[10px]">Focus Agent</span>
@@ -853,6 +1507,39 @@ export default function Home() {
                     )}
                   </div>
 
+                  {/* Token Usage Badge placed in Right Corner of Small Container */}
+                  <TokenUsageBadge
+                    percentage={Math.max(
+                      0,
+                      Math.min(
+                        100,
+                        Math.round(
+                          ((telemetryData.dailyQuota - telemetryData.totalTokensUsed) /
+                            telemetryData.dailyQuota) *
+                            100
+                        )
+                      )
+                    )}
+                    totalTokensUsed={telemetryData.totalTokensUsed}
+                    dailyQuota={telemetryData.dailyQuota}
+                    isDark={isDark}
+                    accentColor={accentColor}
+                    onClick={() => setIsAgentUsageModalOpen(true)}
+                  />
+                </div>
+
+                {/* 1. Main Prompt Bar Container */}
+                <div
+                  className={`w-full rounded-[22px] p-3 md:p-3.5 transition-all mb-3 ${promptCardBg}`}
+                >
+                  {/* Uploaded File Attachments Preview (Composer Attachments) */}
+                  <PromptAttachments
+                    files={attachedFiles}
+                    onRemove={handleFileRemove}
+                    isDark={isDark}
+                    accentColor={accentColor}
+                  />
+
                   {/* Textarea (FUNCTIONAL: User types here - high contrast & immediately visible on theme switch) */}
                   <textarea
                     ref={textareaRef}
@@ -864,11 +1551,10 @@ export default function Home() {
                     className="w-full bg-transparent resize-none outline-none text-xs md:text-sm leading-relaxed py-1 px-1 transition-colors duration-200 prompt-textarea"
                   />
 
-                  {/* Bottom Controls Row: Visual Chips & ONLY Send Arrow is Functional */}
+                  {/* Bottom Controls Row: Paperclip on Left, ModelPicker + Send on Right */}
                   <div className="flex items-center justify-between pt-3 border-t prompt-bottom-border">
-                    {/* Visual chips & Model Picker */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* Interactive Paperclip Attach Button (Zero token cost, safe click) */}
+                    {/* Left: Interactive Paperclip Attach Button */}
+                    <div className="flex items-center gap-2">
                       <button
                         ref={paperclipBtnRef}
                         type="button"
@@ -894,8 +1580,10 @@ export default function Home() {
                           </span>
                         )}
                       </button>
+                    </div>
 
-                      {/* AI Agent / Model Provider Dropdown Picker */}
+                    {/* Right: ModelPicker takes the token usage spot + Send Pill Button */}
+                    <div className="flex items-center gap-2 shrink-0">
                       <ModelPicker
                         selectedProvider={selectedProvider}
                         selectedModel={selectedModel}
@@ -908,111 +1596,98 @@ export default function Home() {
                         accentColor={accentColor}
                       />
 
-                      {/* Interactive Preset Buttons: Selects agent without triggering prompt execution */}
+                      {/* Submit Pill Button (FUNCTIONAL: Only clicking this sends the typed prompt) */}
                       <button
-                        type="button"
-                        onClick={() => {
-                          setActiveFocusAgent((prev) => (prev === "researcher" ? null : "researcher"));
-                          textareaRef.current?.focus();
+                        onClick={() => handleSubmit()}
+                        onMouseEnter={() => {
+                          if ((input.trim() || attachedFiles.length > 0) && !isLoading) {
+                            heroSendIconRef.current?.startAnimation();
+                          }
                         }}
-                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 select-none ${
-                          activeFocusAgent === "researcher"
-                            ? isDark
-                              ? "bg-blue-500/25 text-blue-200 border border-blue-400/50 shadow-[0_0_12px_rgba(59,130,246,0.3)] ring-1 ring-blue-400/30 font-semibold"
-                              : "bg-blue-100 text-blue-900 border border-blue-300 shadow-sm font-semibold ring-1 ring-blue-400/40"
-                            : `${chipGlass} hover:border-blue-400/40 hover:bg-white/5`
-                        }`}
-                        title="Focus on Web Search & Real-Time Research"
-                      >
-                        <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <circle cx="10.5" cy="10.5" r="6.5" strokeWidth="2" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 16l4 4" />
-                        </svg>
-                        <span>Search the web</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveFocusAgent((prev) => (prev === "coder" ? null : "coder"));
-                          textareaRef.current?.focus();
+                        onMouseLeave={() => {
+                          heroSendIconRef.current?.stopAnimation();
                         }}
-                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 select-none ${
-                          activeFocusAgent === "coder"
-                            ? isDark
-                              ? "bg-purple-500/25 text-purple-200 border border-purple-400/50 shadow-[0_0_12px_rgba(168,85,247,0.3)] ring-1 ring-purple-400/30 font-semibold"
-                              : "bg-purple-100 text-purple-900 border border-purple-300 shadow-sm font-semibold ring-1 ring-purple-400/40"
-                            : `${chipGlass} hover:border-purple-400/40 hover:bg-white/5`
+                        disabled={(!input.trim() && attachedFiles.length === 0) || isLoading}
+                        style={
+                          (input.trim() || attachedFiles.length > 0) && !isLoading
+                            ? {
+                                background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
+                                boxShadow: `0 4px 18px ${accentColor}55`,
+                              }
+                            : undefined
+                        }
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+                          (input.trim() || attachedFiles.length > 0) && !isLoading
+                            ? "text-white hover:scale-105 cursor-pointer"
+                            : isDark
+                            ? "bg-white/10 text-white/30 cursor-not-allowed"
+                            : "bg-white/40 text-purple-900/40 border border-white/50 cursor-not-allowed"
                         }`}
-                        title="Focus on Software Engineering & Architecture"
+                        title="Send prompt"
                       >
-                        <span className="text-purple-400">💻</span>
-                        <span>Write code</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveFocusAgent((prev) => (prev === "summarizer" ? null : "summarizer"));
-                          textareaRef.current?.focus();
-                        }}
-                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 select-none ${
-                          activeFocusAgent === "summarizer"
-                            ? isDark
-                              ? "bg-amber-500/25 text-amber-200 border border-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.3)] ring-1 ring-amber-400/30 font-semibold"
-                              : "bg-amber-100 text-amber-900 border border-amber-300 shadow-sm font-semibold ring-1 ring-amber-400/40"
-                            : `${chipGlass} hover:border-amber-400/40 hover:bg-white/5`
-                        }`}
-                        title="Focus on Document Synthesis & Executive Summaries"
-                      >
-                        <span className="text-orange-400">📄</span>
-                        <span>Summarize</span>
+                        <ArrowUpIcon
+                          ref={heroSendIconRef}
+                          size={16}
+                          duration={0.8}
+                          color={
+                            (input.trim() || attachedFiles.length > 0) && !isLoading
+                              ? "#ffffff"
+                              : isDark
+                              ? "rgba(255, 255, 255, 0.3)"
+                              : "rgba(88, 28, 135, 0.4)"
+                          }
+                        />
                       </button>
                     </div>
-
-                    {/* Submit Pill Button (FUNCTIONAL: Only clicking this sends the typed prompt) */}
-                    <button
-                      onClick={() => handleSubmit()}
-                      onMouseEnter={() => {
-                        if ((input.trim() || attachedFiles.length > 0) && !isLoading) {
-                          heroSendIconRef.current?.startAnimation();
-                        }
-                      }}
-                      onMouseLeave={() => {
-                        heroSendIconRef.current?.stopAnimation();
-                      }}
-                      disabled={(!input.trim() && attachedFiles.length === 0) || isLoading}
-                      style={
-                        (input.trim() || attachedFiles.length > 0) && !isLoading
-                          ? {
-                              background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
-                              boxShadow: `0 4px 18px ${accentColor}55`,
-                            }
-                          : undefined
-                      }
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
-                        (input.trim() || attachedFiles.length > 0) && !isLoading
-                          ? "text-white hover:scale-105 cursor-pointer"
-                          : isDark
-                          ? "bg-white/10 text-white/30 cursor-not-allowed"
-                          : "bg-white/40 text-purple-900/40 border border-white/50 cursor-not-allowed"
-                      }`}
-                      title="Send prompt"
-                    >
-                      <ArrowUpIcon
-                        ref={heroSendIconRef}
-                        size={16}
-                        duration={0.8}
-                        color={
-                          (input.trim() || attachedFiles.length > 0) && !isLoading
-                            ? "#ffffff"
-                            : isDark
-                            ? "rgba(255, 255, 255, 0.3)"
-                            : "rgba(88, 28, 135, 0.4)"
-                        }
-                      />
-                    </button>
                   </div>
+                </div>
+
+                {/* Suggestion Chips Below Prompt Bar (Screenshot 4 - Framer Style) */}
+                <div className="flex items-center justify-center gap-2 flex-wrap mb-4 select-none">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleChipClick(
+                        "Search the web for recent advancements in AI agent architecture and summarize",
+                        "researcher"
+                      )
+                    }
+                    className={`inline-flex items-center gap-1.5 h-7 px-3.5 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 shadow-xs hover:scale-105 active:scale-95 ${chipGlass} hover:border-blue-400/50 hover:bg-blue-500/10`}
+                  >
+                    <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <circle cx="10.5" cy="10.5" r="6.5" strokeWidth="2" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 16l4 4" />
+                    </svg>
+                    <span>Search the web</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleChipClick(
+                        "Write a clean, production-ready TypeScript API handler with validation and types",
+                        "coder"
+                      )
+                    }
+                    className={`inline-flex items-center gap-1.5 h-7 px-3.5 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 shadow-xs hover:scale-105 active:scale-95 ${chipGlass} hover:border-purple-400/50 hover:bg-purple-500/10`}
+                  >
+                    <span className="text-purple-400">💻</span>
+                    <span>Write code</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleChipClick(
+                        "Please synthesize and summarize this information into key executive bullet points",
+                        "summarizer"
+                      )
+                    }
+                    className={`inline-flex items-center gap-1.5 h-7 px-3.5 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 shadow-xs hover:scale-105 active:scale-95 ${chipGlass} hover:border-amber-400/50 hover:bg-amber-500/10`}
+                  >
+                    <span className="text-orange-400">📄</span>
+                    <span>Summarize</span>
+                  </button>
                 </div>
 
                 {/* 2. Three Feature Cards (PURELY INFORMATIONAL, NO click triggers, ZERO token consumption) */}
@@ -1094,7 +1769,7 @@ export default function Home() {
           ) : (
             /* STATE B: Active Conversation Stream */
             <div
-              className={`max-w-3xl mx-auto py-6 ${
+              className={`w-full max-w-3xl mx-auto pt-6 pb-14 ${
                 fontDensity === "compact"
                   ? "space-y-3.5"
                   : fontDensity === "spacious"
@@ -1102,54 +1777,70 @@ export default function Home() {
                   : "space-y-6"
               }`}
             >
-              {messages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
-                >
-                  {/* Active Agent Badge */}
-                  {msg.role === "assistant" && msg.agentTitle && (
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold mb-1.5 ml-1" style={{ color: accentColor }}>
-                      <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: accentColor }} />
-                      <span>{msg.agentTitle}</span>
-                    </div>
-                  )}
-
-                  {/* Message Bubble */}
+              {isSessionLoading ? (
+                <ChatHistorySkeleton isDark={isDark} />
+              ) : (
+                messages.map((msg, idx) => (
                   <div
-                    style={
-                      msg.role === "user"
-                        ? {
-                            background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
-                            boxShadow: `0 6px 20px ${accentColor}35`,
-                          }
-                        : undefined
-                    }
-                    className={`max-w-[88%] md:max-w-[82%] rounded-2xl whitespace-pre-wrap ${
-                      fontDensity === "compact"
-                        ? "px-3.5 py-2 text-[13px] leading-snug"
-                        : fontDensity === "spacious"
-                        ? "px-5 py-4 text-[15px] leading-loose"
-                        : "px-4 py-3 text-sm leading-relaxed"
-                    } ${
-                      msg.role === "user"
-                        ? "text-white rounded-br-sm"
-                        : `${
-                            isDark
-                              ? "bg-[#140e24]/80 border-purple-500/20 text-[#ede8f5]"
-                              : "bg-white/80 border-purple-200/80 text-[#251b36]"
-                          } border backdrop-blur-md rounded-bl-sm shadow-md`
-                    }`}
+                    key={idx}
+                    className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
                   >
-                    {msg.content}
+                    {/* Active Agent Badge */}
+                    {msg.role === "assistant" && msg.agentTitle && (
+                      <div className="flex items-center gap-1.5 text-[11px] font-semibold mb-1.5 ml-1" style={{ color: accentColor }}>
+                        <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: accentColor }} />
+                        <span>{msg.agentTitle}</span>
+                      </div>
+                    )}
+
+                    {/* Attached Files Visual Cards (PDF, Image, Doc) */}
+                    {msg.attachments && msg.attachments.length > 0 && (
+                      <div className="mb-2 max-w-[88%] md:max-w-[82%]">
+                        <MessageAttachments
+                          attachments={msg.attachments}
+                          isDark={isDark}
+                          accentColor={accentColor}
+                        />
+                      </div>
+                    )}
+
+                    {/* Message Bubble */}
+                    {msg.content && (
+                      <div
+                        style={
+                          msg.role === "user"
+                            ? {
+                                background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
+                                boxShadow: `0 6px 20px ${accentColor}35`,
+                              }
+                            : undefined
+                        }
+                        className={`max-w-[88%] md:max-w-[82%] rounded-2xl whitespace-pre-wrap ${
+                          fontDensity === "compact"
+                            ? "px-3.5 py-2 text-[13px] leading-snug"
+                            : fontDensity === "spacious"
+                            ? "px-5 py-4 text-[15px] leading-loose"
+                            : "px-4 py-3 text-sm leading-relaxed"
+                        } ${
+                          msg.role === "user"
+                            ? "text-white rounded-br-sm"
+                            : `${
+                                isDark
+                                  ? "bg-[#140e24]/80 border-purple-500/20 text-[#ede8f5]"
+                                  : "bg-white/80 border-purple-200/80 text-[#251b36]"
+                              } border backdrop-blur-md rounded-bl-sm shadow-md`
+                        }`}
+                      >
+                        {msg.content}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                ))
+              )}
 
               {isLoading && (
-                <div className="flex items-center gap-2 text-xs ml-1" style={{ color: accentColor }}>
-                  <div className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: accentColor }} />
-                  <span>Astra AI is thinking & streaming...</span>
+                <div className="flex flex-col items-start gap-2 pt-2 ml-1 animate-in fade-in-0 duration-200">
+                  <AgentThinking variant="stars" label="Thinking" tone="accent" />
                 </div>
               )}
 
@@ -1162,142 +1853,186 @@ export default function Home() {
         {messages.length > 0 && (
           <footer className="p-4 bg-transparent transition-colors">
             <div className="max-w-3xl mx-auto shadow-xl">
-              {activeFocusAgent && (
-                <div className="flex items-center gap-2 mb-1.5 px-1 animate-in fade-in-0 duration-150">
-                  <div
-                    className={`inline-flex items-center gap-1.5 h-5 px-2 rounded-full text-xs font-semibold cursor-pointer border ${
-                      isDark
-                        ? FOCUS_AGENTS_CONFIG[activeFocusAgent].badgeDark
-                        : FOCUS_AGENTS_CONFIG[activeFocusAgent].badgeLight
-                    }`}
-                    onClick={() => setActiveFocusAgent(null)}
-                    title="Click to remove focus agent"
-                  >
-                    {FOCUS_AGENTS_CONFIG[activeFocusAgent].icon}
-                    <span className="text-[10px]">{FOCUS_AGENTS_CONFIG[activeFocusAgent].label}</span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveFocusAgent(null);
-                      }}
-                      className="ml-0.5 opacity-60 hover:opacity-100 text-[10px]"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <span
-                    className={`text-[10px] font-medium ${
-                      isDark
-                        ? FOCUS_AGENTS_CONFIG[activeFocusAgent].textColorDark
-                        : FOCUS_AGENTS_CONFIG[activeFocusAgent].textColorLight
-                    }`}
-                  >
-                    {FOCUS_AGENTS_CONFIG[activeFocusAgent].title}
-                  </span>
-                </div>
-              )}
-              <div
-                className={`w-full rounded-[22px] p-3 transition-all flex items-end gap-2 ${promptCardBg}`}
-              >
-                {/* Interactive Paperclip button in footer */}
-                <button
-                  ref={footerPaperclipBtnRef}
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setActiveTrigger("footer");
-                    setIsFileUploadOpen((prev) => !prev);
-                  }}
-                  className={`h-7 w-7 relative rounded-full flex items-center justify-center border flex-shrink-0 transition-all duration-200 cursor-pointer ${chipGlass} ${
-                    attachedFiles.length > 0 ? "ring-2 ring-purple-400 bg-purple-500/20" : ""
-                  }`}
-                  title={
-                    attachedFiles.length > 0
-                      ? `${attachedFiles.length} file(s) attached`
-                      : "Attach documents or files"
-                  }
-                >
-                  <PaperclipIcon />
-                  {attachedFiles.length > 0 && (
-                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-purple-600 text-white text-[8px] font-bold flex items-center justify-center shadow-sm">
-                      {attachedFiles.length}
-                    </span>
+              {/* Header Above Footer Prompt Bar (Focus Agent on Left, Token Usage Badge on Right) */}
+              <div className="flex items-center justify-between mb-1.5 px-1 animate-in fade-in-0 duration-150">
+                <div className="flex items-center gap-2">
+                  {activeFocusAgent ? (
+                    <>
+                      <div
+                        className={`inline-flex items-center gap-1.5 h-5 px-2 rounded-full text-xs font-semibold cursor-pointer border ${
+                          isDark
+                            ? FOCUS_AGENTS_CONFIG[activeFocusAgent].badgeDark
+                            : FOCUS_AGENTS_CONFIG[activeFocusAgent].badgeLight
+                        }`}
+                        onClick={() => setActiveFocusAgent(null)}
+                        title="Click to remove focus agent"
+                      >
+                        {FOCUS_AGENTS_CONFIG[activeFocusAgent].icon}
+                        <span className="text-[10px]">{FOCUS_AGENTS_CONFIG[activeFocusAgent].label}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveFocusAgent(null);
+                          }}
+                          className="ml-0.5 opacity-60 hover:opacity-100 text-[10px]"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <span
+                        className={`text-[10px] font-medium ${
+                          isDark
+                            ? FOCUS_AGENTS_CONFIG[activeFocusAgent].textColorDark
+                            : FOCUS_AGENTS_CONFIG[activeFocusAgent].textColorLight
+                        }`}
+                      >
+                        {FOCUS_AGENTS_CONFIG[activeFocusAgent].title}
+                      </span>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-[10px] opacity-70">
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
+                      <span>Astra Multi-Agent Supervisor</span>
+                    </div>
                   )}
-                </button>
+                </div>
 
-                {/* AI Agent / Model Provider Dropdown Picker */}
-                <ModelPicker
-                  selectedProvider={selectedProvider}
-                  selectedModel={selectedModel}
-                  onSelect={(provider, modelId) => {
-                    setSelectedProvider(provider);
-                    setSelectedModel(modelId);
-                  }}
+                {/* Agent Token Usage Badge placed in Right Corner of Header */}
+                <TokenUsageBadge
+                  percentage={Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      Math.round(
+                        ((telemetryData.dailyQuota - telemetryData.totalTokensUsed) /
+                          telemetryData.dailyQuota) *
+                          100
+                      )
+                    )
+                  )}
+                  totalTokensUsed={telemetryData.totalTokensUsed}
+                  dailyQuota={telemetryData.dailyQuota}
                   isDark={isDark}
-                  hasCustomAgentKey={hasCustomAgentKey}
+                  accentColor={accentColor}
+                  onClick={() => setIsAgentUsageModalOpen(true)}
+                />
+              </div>
+
+              {/* Main Footer Prompt Bar Box */}
+              <div
+                className={`w-full rounded-[22px] p-3 transition-all flex flex-col gap-2 ${promptCardBg}`}
+              >
+                {/* Uploaded File Attachments Preview (Composer Attachments) */}
+                <PromptAttachments
+                  files={attachedFiles}
+                  onRemove={handleFileRemove}
+                  isDark={isDark}
                   accentColor={accentColor}
                 />
 
-                {/* Textarea (FUNCTIONAL - high contrast & immediately visible on theme switch) */}
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={handleInput}
-                  onKeyDown={handleKeyDown}
-                  rows={1}
-                  placeholder="Ask Astra AI anything..."
-                  disabled={isLoading}
-                  className={`flex-1 bg-transparent resize-none outline-none text-sm leading-relaxed max-h-36 px-2 py-1 transition-colors duration-200 ${
-                    isDark
-                      ? "text-zinc-100 placeholder:text-zinc-400 placeholder:opacity-90"
-                      : "text-[#180f2d] placeholder:text-[#523d70] placeholder:opacity-90 font-medium"
-                  }`}
-                />
+                <div className="flex items-end gap-2 w-full">
+                  {/* Left: Interactive Paperclip button in footer */}
+                  <button
+                    ref={footerPaperclipBtnRef}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setActiveTrigger("footer");
+                      setIsFileUploadOpen((prev) => !prev);
+                    }}
+                    className={`h-7 w-7 relative rounded-full flex items-center justify-center border flex-shrink-0 transition-all duration-200 cursor-pointer ${chipGlass} ${
+                      attachedFiles.length > 0 ? "ring-2 ring-purple-400 bg-purple-500/20" : ""
+                    }`}
+                    title={
+                      attachedFiles.length > 0
+                        ? `${attachedFiles.length} file(s) attached`
+                        : "Attach documents or files"
+                    }
+                  >
+                    <PaperclipIcon />
+                    {attachedFiles.length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-purple-600 text-white text-[8px] font-bold flex items-center justify-center shadow-sm">
+                        {attachedFiles.length}
+                      </span>
+                    )}
+                  </button>
 
-                {/* Submit Button (FUNCTIONAL) */}
-                <button
-                  onClick={() => handleSubmit()}
-                  onMouseEnter={() => {
-                    if ((input.trim() || attachedFiles.length > 0) && !isLoading) {
-                      footerSendIconRef.current?.startAnimation();
-                    }
-                  }}
-                  onMouseLeave={() => {
-                    footerSendIconRef.current?.stopAnimation();
-                  }}
-                  disabled={(!input.trim() && attachedFiles.length === 0) || isLoading}
-                  style={
-                    (input.trim() || attachedFiles.length > 0) && !isLoading
-                      ? {
-                          background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
-                          boxShadow: `0 4px 18px ${accentColor}55`,
-                        }
-                      : undefined
-                  }
-                  className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center transition-all ${
-                    (input.trim() || attachedFiles.length > 0) && !isLoading
-                      ? "text-white hover:scale-105 cursor-pointer"
-                      : isDark
-                      ? "bg-white/10 text-white/30 cursor-not-allowed"
-                      : "bg-white/40 text-purple-900/40 border border-white/50 cursor-not-allowed"
-                  }`}
-                  title="Send prompt"
-                >
-                  <ArrowUpIcon
-                    ref={footerSendIconRef}
-                    size={16}
-                    duration={0.8}
-                    color={
-                      (input.trim() || attachedFiles.length > 0) && !isLoading
-                        ? "#ffffff"
-                        : isDark
-                        ? "rgba(255, 255, 255, 0.3)"
-                        : "rgba(88, 28, 135, 0.4)"
-                    }
+                  {/* Left: Textarea shifted left immediately next to paperclip */}
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={handleInput}
+                    onKeyDown={handleKeyDown}
+                    rows={1}
+                    placeholder="Ask Astra AI anything..."
+                    disabled={isLoading}
+                    className={`flex-1 bg-transparent resize-none outline-none text-sm leading-relaxed max-h-36 px-2 py-1 transition-colors duration-200 ${
+                      isDark
+                        ? "text-zinc-100 placeholder:text-zinc-400 placeholder:opacity-90"
+                        : "text-[#180f2d] placeholder:text-[#523d70] placeholder:opacity-90 font-medium"
+                    }`}
                   />
-                </button>
+
+                  {/* Right: ModelPicker takes the token usage spot + Send Button */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <ModelPicker
+                      selectedProvider={selectedProvider}
+                      selectedModel={selectedModel}
+                      onSelect={(provider, modelId) => {
+                        setSelectedProvider(provider);
+                        setSelectedModel(modelId);
+                      }}
+                      isDark={isDark}
+                      hasCustomAgentKey={hasCustomAgentKey}
+                      accentColor={accentColor}
+                    />
+
+                    {/* Submit Button (FUNCTIONAL) */}
+                    <button
+                      onClick={() => handleSubmit()}
+                      onMouseEnter={() => {
+                        if ((input.trim() || attachedFiles.length > 0) && !isLoading) {
+                          footerSendIconRef.current?.startAnimation();
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        footerSendIconRef.current?.stopAnimation();
+                      }}
+                      disabled={(!input.trim() && attachedFiles.length === 0) || isLoading}
+                      style={
+                        (input.trim() || attachedFiles.length > 0) && !isLoading
+                          ? {
+                              background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
+                              boxShadow: `0 4px 18px ${accentColor}55`,
+                            }
+                          : undefined
+                      }
+                      className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center transition-all ${
+                        (input.trim() || attachedFiles.length > 0) && !isLoading
+                          ? "text-white hover:scale-105 cursor-pointer"
+                          : isDark
+                          ? "bg-white/10 text-white/30 cursor-not-allowed"
+                          : "bg-white/40 text-purple-900/40 border border-white/50 cursor-not-allowed"
+                      }`}
+                      title="Send prompt"
+                    >
+                      <ArrowUpIcon
+                        ref={footerSendIconRef}
+                        size={16}
+                        duration={0.8}
+                        color={
+                          (input.trim() || attachedFiles.length > 0) && !isLoading
+                            ? "#ffffff"
+                            : isDark
+                            ? "rgba(255, 255, 255, 0.3)"
+                            : "rgba(88, 28, 135, 0.4)"
+                        }
+                      />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </footer>
@@ -1374,6 +2109,46 @@ export default function Home() {
         <KeyboardShortcutsModal
           isOpen={isShortcutsModalOpen}
           onClose={() => setIsShortcutsModalOpen(false)}
+          isDark={isDark}
+          accentColor={accentColor}
+        />
+
+        {/* AI Agent Usage & Token Telemetry Modal */}
+        <AgentUsageModal
+          isOpen={isAgentUsageModalOpen}
+          onClose={() => setIsAgentUsageModalOpen(false)}
+          isDark={isDark}
+          accentColor={accentColor}
+          telemetryData={telemetryData}
+          onResetTelemetry={handleResetTelemetry}
+          onRefreshTelemetry={handleRefreshTelemetry}
+          onOpenApiKeys={() => {
+            setIsAgentUsageModalOpen(false);
+            setIsApiKeysModalOpen(true);
+          }}
+        />
+
+        {/* Right-Click & 3-Dots Context Menu for Session Items */}
+        <ChatContextMenu
+          isOpen={Boolean(contextMenu)}
+          position={contextMenu ? { x: contextMenu.x, y: contextMenu.y } : null}
+          isPinned={Boolean(contextMenu?.isPinned)}
+          onPin={() => {
+            if (contextMenu) handleTogglePin(contextMenu.sessionId);
+          }}
+          onRename={() => {
+            if (contextMenu) {
+              const sess = sessions.find((s) => s.id === contextMenu.sessionId);
+              if (sess) handleStartRename(sess);
+            }
+          }}
+          onDelete={() => {
+            if (contextMenu) {
+              const fakeEvent = { stopPropagation: () => {} } as React.MouseEvent;
+              handleDeleteSession(fakeEvent, contextMenu.sessionId);
+            }
+          }}
+          onClose={() => setContextMenu(null)}
           isDark={isDark}
           accentColor={accentColor}
         />

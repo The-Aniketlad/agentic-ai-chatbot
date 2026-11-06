@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@heroui/react": ["./components/ui/skeleton"]
     }
   },
   "include": [

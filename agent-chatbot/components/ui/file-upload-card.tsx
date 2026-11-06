@@ -10,6 +10,9 @@ export interface UploadedFile {
   file: File;
   progress: number;
   status: "uploading" | "completed" | "error";
+  dataUrl?: string;
+  extractedText?: string;
+  kind?: "pdf" | "image" | "document" | "spreadsheet" | "code" | "other";
 }
 
 interface FileUploadCardProps {

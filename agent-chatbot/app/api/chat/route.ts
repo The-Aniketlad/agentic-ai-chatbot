@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Run specialist agent with assigned persona, tools, preferred provider, and custom temperature
-    const { content, provider, model } = await runAgent(
+    const { content, provider, model, usage } = await runAgent(
       windowedMessages,
       effectiveSystemPrompt,
       selectedAgent.tools,
@@ -90,6 +90,9 @@ export async function POST(req: NextRequest) {
         "X-Model": model,
         "X-Agent": preferredProvider === "custom" ? "Custom Autonomous Agent" : selectedAgent.name,
         "X-Agent-Title": preferredProvider === "custom" ? "Custom Autonomous Agent" : selectedAgent.title,
+        "X-Prompt-Tokens": String(usage?.promptTokens || 0),
+        "X-Completion-Tokens": String(usage?.completionTokens || 0),
+        "X-Total-Tokens": String(usage?.totalTokens || 0),
       },
     });
   } catch (err: unknown) {

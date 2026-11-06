@@ -108,6 +108,7 @@ export async function chat(
         rawMessage: res.choices[0]?.message,
         provider: p.name,
         model: p.model,
+        usage: res.usage,
       };
     } catch (err: unknown) {
       const error = err as { status?: number; message?: string };
