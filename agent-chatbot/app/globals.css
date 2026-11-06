@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@bible-strong/avatar-react/styles.css";
 
 :root {
   --font-geist-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
