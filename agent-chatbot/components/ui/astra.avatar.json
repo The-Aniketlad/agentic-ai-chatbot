@@ -90,7 +90,7 @@
     ]
   },
   "colors": {
-    "body": "#e8570c",
+    "body": "#a855f7",
     "eyes": "#111316"
   },
   "expressions": {
@@ -912,6 +912,35 @@
       "colors": {
         "body": "#adc3ff"
       }
+    },
+    "intro-face": {
+      "head": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "eyes": {
+        "left": {
+          "width": 28.5111261447163,
+          "height": 76.720703125,
+          "x": 0,
+          "y": 0,
+          "angle": -13.600024334384193
+        },
+        "right": {
+          "width": 28.5111261447163,
+          "height": 76.720703125,
+          "x": 0,
+          "y": 0,
+          "angle": 9.32504743686113
+        },
+        "spacing": 75.35615289554049
+      },
+      "perspective": 1,
+      "motion": {
+        "eyes": "none",
+        "body": "none"
+      }
     }
   },
   "expressionOrder": [
@@ -942,7 +971,8 @@
     "suspicious-right",
     "shy-downward",
     "angry-brows",
-    "uneasy-left"
+    "uneasy-left",
+    "intro-face"
   ],
   "animations": {
     "sleeping": {
@@ -1007,27 +1037,63 @@
       "playbackMode": "loop",
       "steps": [
         {
-          "expression": "upward-side-glance",
-          "holdMs": 2400,
-          "transitionMs": 500,
+          "expression": "intro-face",
+          "holdMs": 2200,
+          "transitionMs": 450,
           "transition": "smooth"
         },
         {
           "expression": "curious-left",
-          "holdMs": 2400,
-          "transitionMs": 500,
-          "transition": "smooth"
-        },
-        {
-          "expression": "playful-right",
-          "holdMs": 2400,
-          "transitionMs": 500,
+          "holdMs": 2200,
+          "transitionMs": 450,
           "transition": "smooth"
         },
         {
           "expression": "gentle-downward-gaze",
-          "holdMs": 2400,
-          "transitionMs": 500,
+          "holdMs": 2200,
+          "transitionMs": 450,
+          "transition": "smooth"
+        },
+        {
+          "expression": "playful-right",
+          "holdMs": 2200,
+          "transitionMs": 450,
+          "transition": "smooth"
+        },
+        {
+          "expression": "asymmetric-up-left",
+          "holdMs": 2200,
+          "transitionMs": 450,
+          "transition": "smooth"
+        },
+        {
+          "expression": "joyful-wide",
+          "holdMs": 2200,
+          "transitionMs": 450,
+          "transition": "smooth"
+        },
+        {
+          "expression": "attentive-left",
+          "holdMs": 2200,
+          "transitionMs": 450,
+          "transition": "smooth"
+        },
+        {
+          "expression": "downward-gaze",
+          "holdMs": 2200,
+          "transitionMs": 450,
+          "transition": "smooth"
+        },
+        {
+          "expression": "upward-side-glance",
+          "holdMs": 2200,
+          "transitionMs": 450,
+          "transition": "smooth"
+        },
+        {
+          "expression": "small-attentive",
+          "holdMs": 2200,
+          "transitionMs": 450,
           "transition": "smooth"
         }
       ],
@@ -1040,7 +1106,7 @@
       },
       "metadata": {
         "label": "idle",
-        "description": "Continuous 4-motion living cycle: glance up-right, look left, look right, look center-down.",
+        "description": "Continuous 10-expression natural living animation loop.",
         "group": "Cycle de vie"
       }
     },
